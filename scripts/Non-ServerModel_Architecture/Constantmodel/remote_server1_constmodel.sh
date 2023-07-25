@@ -110,6 +110,9 @@ fi
 
 
 #########################Image Share Receiver ############################################################################################
+for (( c=1; c<=2; c++ ))
+do 
+
 echo "Image shares receiver starts"
 
 $build_path/bin/Image_Share_Receiver --my-id 1 --port $cs1_port_image_receiver --fractional-bits $fractional_bits --file-names $image_config --current-path $build_path > $debug_1/Image_Share_Receiver.txt &
@@ -262,25 +265,28 @@ echo "Output shares of server 1 sent to the Image provider"
 
 wait 
 
-awk '{ sum += $1 } END { print sum }' AverageTimeDetails1 >> AverageTime1
-#  > AverageTimeDetails1 #clearing the contents of the file
+# awk '{ sum += $1 } END { print sum }' AverageTimeDetails1 >> AverageTime1
+# #  > AverageTimeDetails1 #clearing the contents of the file
 
-  sort -r -g AverageMemoryDetails1 | head  -1 >> AverageMemory1
-#  > AverageMemoryDetails1 #clearing the contents of the file
+#   sort -r -g AverageMemoryDetails1 | head  -1 >> AverageMemory1
+# #  > AverageMemoryDetails1 #clearing the contents of the file
 
-echo -e "\nInferencing Finished"
+# echo -e "\nInferencing Finished"
 
-Mem=`cat AverageMemory1`
-Time=`cat AverageTime1`
+# Mem=`cat AverageMemory1`
+# Time=`cat AverageTime1`
 
-Mem=$(printf "%.2f" $Mem) 
-Convert_KB_to_GB=$(printf "%.14f" 9.5367431640625E-7)
-Mem2=$(echo "$Convert_KB_to_GB * $Mem" | bc -l)
+# Mem=$(printf "%.2f" $Mem) 
+# Convert_KB_to_GB=$(printf "%.14f" 9.5367431640625E-7)
+# Mem2=$(echo "$Convert_KB_to_GB * $Mem" | bc -l)
 
-Memory=$(printf "%.3f" $Mem2)
+# Memory=$(printf "%.3f" $Mem2)
 
-echo "Memory requirement:" `printf "%.3f" $Memory` "GB"
-echo "Time taken by inferencing task:" $Time "ms"
-echo "Elapsed Time: $(($end-$start)) seconds"
+# echo "Memory requirement:" `printf "%.3f" $Memory` "GB"
+# echo "Time taken by inferencing task:" $Time "ms"
+# echo "Elapsed Time: $(($end-$start)) seconds"
+
+done 
 
 cd $scripts_path
+

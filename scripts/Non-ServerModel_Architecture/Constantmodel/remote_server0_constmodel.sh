@@ -58,7 +58,7 @@ number_of_layers=`echo $smpc_config | jq -r .number_of_layers`
 fractional_bits=`echo $smpc_config | jq -r .fractional_bits`
 
 # Index of the image for which inferencing task is run
-image_id=`echo $smpc_config | jq -r .image_id`
+# image_id=`echo $smpc_config | jq -r .image_id`
 
 # echo all input variables
 
@@ -117,7 +117,13 @@ if [ -f AverageTime0 ]; then
    # echo "AverageTime0 is removed"
 fi
 
+image_id=`echo $smpc_config | jq -r .image_id`
 #########################Image Share Receiver ############################################################################################
+for (( image_id=1; image_id<=2; image_id++ ))
+do 
+
+
+echo "image id : $image_id"
 echo "Image shares receiver starts"
 
 $build_path/bin/Image_Share_Receiver --my-id 0 --port $cs0_port_image_receiver --fractional-bits $fractional_bits --file-names $image_config --current-path $build_path > $debug_0/Image_Share_Receiver.txt &
@@ -290,25 +296,27 @@ $build_path/bin/Reconstruct --current-path $image_provider_path
 check_exit_statuses $?
 wait  
 
-awk '{ sum += $1 } END { print sum }' AverageTimeDetails0 >> AverageTime0
-#  > AverageTimeDetails0 #clearing the contents of the file
+# awk '{ sum += $1 } END { print sum }' AverageTimeDetails0 >> AverageTime0
+# #  > AverageTimeDetails0 #clearing the contents of the file
 
-sort -r -g AverageMemoryDetails0 | head  -1 >> AverageMemory0
-#  > AverageMemoryDetails0 #clearing the contents of the file
+# sort -r -g AverageMemoryDetails0 | head  -1 >> AverageMemory0
+# #  > AverageMemoryDetails0 #clearing the contents of the file
 
-echo -e "\nInferencing Finished"
+# echo -e "\nInferencing Finished"
 
-Mem=`cat AverageMemory0`
-Time=`cat AverageTime0`
+# Mem=`cat AverageMemory0`
+# Time=`cat AverageTime0`
 
-Mem=$(printf "%.2f" $Mem) 
-Convert_KB_to_GB=$(printf "%.14f" 9.5367431640625E-7)
-Mem2=$(echo "$Convert_KB_to_GB * $Mem" | bc -l)
+# Mem=$(printf "%.2f" $Mem) 
+# Convert_KB_to_GB=$(printf "%.14f" 9.5367431640625E-7)
+# Mem2=$(echo "$Convert_KB_to_GB * $Mem" | bc -l)
 
-Memory=$(printf "%.3f" $Mem2)
+# Memory=$(printf "%.3f" $Mem2)
 
-echo "Memory requirement:" `printf "%.3f" $Memory` "GB"
-echo "Time taken by inferencing task:" $Time "ms"
-echo "Elapsed Time: $(($end-$start)) seconds"
+# echo "Memory requirement:" `printf "%.3f" $Memory` "GB"
+# echo "Time taken by inferencing task:" $Time "ms"
+# echo "Elapsed Time: $(($end-$start)) seconds"
 
 cd $scripts_path 
+
+done
