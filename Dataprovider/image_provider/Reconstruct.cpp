@@ -97,6 +97,17 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "\nThe image shared is detected as"
               << ":" << i << "\n";
+
+    // test reconstructed output
+    std::string home_dir = getenv("BASE_DIR");
+    std::string path = home_dir + "/build_debwithrelinfo_gcc/Reconstructed_output.txt";
+
+    std::ofstream file;
+    file.open(path, std::ios_base::app);
+
+    file << i << "\n";
+    file.close();
+
   } catch (std::runtime_error& e) {
     std::cerr << "ERROR OCCURRED: " << e.what() << "\n";
     std::cerr << "ERROR Caught !!"
