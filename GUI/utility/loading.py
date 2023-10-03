@@ -41,7 +41,7 @@ def call(image):
                 base_dir = os.getenv("BASE_DIR")
                 f = open("output.txt", "w")
                 iter = subprocess.call("python3 " + base_dir + "/Dataprovider/image_provider/preprocess_image.py -f "+image, shell=True)
-                subprocess.call(base_dir + "/scripts/ServerModel_Architecture/HelperNode/ImageProvider_genr.sh", stdout=f)
+                subprocess.call(base_dir + "/scripts/ServerModel_Architecture/HelperNode/ImageProvider.sh", stdout=f)
                 temp = False
                 time.sleep(1)
 

@@ -1,8 +1,9 @@
-// ./bin/machine_learning --sample-file sample_file --actual-label-file actual_label
+// ./bin/machine_learning_10 --sample-file sample_file --actual-label-file actual_label
 // --fractional-bits 13 --sample-size 20 --classes 10
-//1000 - 80, 10000 - 91, 15000 - 94
+// 1000 - 80, 10000 - 91, 15000 - 94
 #include <algorithm>
 #include <bitset>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -72,14 +73,16 @@ void generate_random_numbers(std::vector<int>* sample_file, const Options& optio
     std::mt19937 gen(rd()); // Mersenne Twister random number generator
 
     int minNumber = 1;
-    int maxNumber = 5000;
+    int maxNumber = 2000;
     int numberOfRandomNumbers = options.m / options.classes;
     
     std::uniform_int_distribution<int> distribution(minNumber, maxNumber);
 
     for(int i = 0; i < numberOfRandomNumbers; ++i) {
+      // for(int i = 0; i < options.m; ++i) {
       int randomNumber = distribution(gen);
       sample_file->push_back(randomNumber);
+      // sample_file->push_back(i+1);
     }
 }
 
@@ -100,6 +103,8 @@ void read_input(std::vector<float>& row_major_input,std::vector<float>& column_m
 
   for (int i = 0; i < options.m; i++) {
     input_path = path + "images_folder" + std::to_string((int) (i / (options.m / options.classes))) + "/X" + std::to_string(sample_file[i]) + ".csv";
+    
+    std::cout<<input_path<<"\n";
 
     file.open(input_path);
     std::string str;
@@ -166,6 +171,7 @@ std::vector<std::uint64_t> find_weights(std::vector<float> row_major_input,std::
   std::vector<std::uint64_t> dot_product(m * classes, 0);
   std::vector<std::uint64_t> dot_product_decoded(m * classes, 0);
 
+
   dot_product = MOTION::matrix_multiply(classes, size_single_input, m, theta_current, encoded_column_major_input);
   std::transform(dot_product.begin(), dot_product.end(), dot_product_decoded.begin(),
                  [frac_bits](auto j) {
@@ -177,27 +183,45 @@ std::vector<std::uint64_t> find_weights(std::vector<float> row_major_input,std::
                  [frac_bits](auto j) { return sigmoid(j, frac_bits); });
 
   
-  std::string home_dir=std::getenv("BASE_DIR");
-  
-  std::string path =  home_dir+"/config_files/"+options.actual_label_file;
-  std::ifstream file;
-
-  file.open(path);
-  std::vector<float> actual_label;
-  while(!file.eof())
-  {
-    float data;
-    file>>data;
-    actual_label.push_back(data);
+  std::cout << "sigmoid_dp: \n";
+  for (int i = 0; i < sigmoid_dp.size(); i++) {
+    std::cout << MOTION::new_fixed_point::decode<std::uint64_t, float>(sigmoid_dp[i],
+                                                                       frac_bits) << " ";
   }
-  file.close();
+
+  std::cout << "\n\n";
+
+  
+  // std::string home_dir=std::getenv("BASE_DIR");
+  
+  // std::string path =  home_dir+"/config_files/"+options.actual_label_file;
+  // std::ifstream file;
+  
+  // file.open(path);
+  // std::vector<float> actual_label;
+  // while(!file.eof())
+  // {
+  //   float data;
+  //   file>>data;
+  //   actual_label.push_back(data);
+  // }
+  // file.close();
+  std::vector<float> actual_label(options.classes*options.m,0);
+  for(int i=0;i<options.m;i++)
+  {
+    int class_no = (int)(i / (options.m / options.classes));
+      int temp = class_no + i * options.classes;
+      actual_label[temp]=1;
+  }
 
   std::vector<float> actual_label_transpose;
   for (int i = 0; i < classes; ++i) {
     for (int j = 0; j < m; j++) {
       auto data = actual_label[j * classes + i];
+      std::cout<<data<<" ";
     actual_label_transpose.push_back(data);
     }
+    std::cout<<"\n";
   }
 
   std::vector<std::uint64_t> encoded_actual_label_transpose(m * classes, 0);
@@ -209,6 +233,16 @@ std::vector<std::uint64_t> find_weights(std::vector<float> row_major_input,std::
   std::vector<std::uint64_t> temp(m * classes, 0);
   std::transform(sigmoid_dp.begin(), sigmoid_dp.end(), encoded_actual_label_transpose.begin(), temp.begin(),
                  std::minus{});
+
+    std::cout << "h-y: \n";
+  for (int i = 0; i < temp.size(); i++) {
+    std::cout << MOTION::new_fixed_point::decode<std::uint64_t, float>(temp[i],
+                                                                       frac_bits) << " ";
+  }
+
+  std::cout << "\n\n";
+
+  
 
   std::vector<std::uint64_t> loss_function(size_single_input * classes, 0);
   std::vector<std::uint64_t> loss_function_decoded(size_single_input * classes, 0);
@@ -233,9 +267,11 @@ std::vector<std::uint64_t> find_weights(std::vector<float> row_major_input,std::
   std::transform(theta_current.begin(), theta_current.end(), loss_function_decoded.begin(),
                  theta_new.begin(), std::minus{});
 
+  std::string home_dir=std::getenv("BASE_DIR");
   if(write_to_file) {
     std::ofstream out_file;
-    path = home_dir+"/build_debwithrelinfo_gcc/Theta_new";
+    
+    auto path = home_dir+"/build_debwithrelinfo_gcc/Theta_new";
 
     out_file.open(path,std::ios_base::app);
 
@@ -305,6 +341,7 @@ void read_test_data(std::vector<float>&test_input, std::vector<float>& test_inpu
     test_input_transpose.push_back(data);
     }
   }
+  std::cout<<"test input transpose size : "<<test_input_transpose.size()<<"\n";
 }
 
 int test_accuracy(std::vector<std::uint64_t>theta, const Options& options) {
@@ -314,6 +351,12 @@ int test_accuracy(std::vector<std::uint64_t>theta, const Options& options) {
   int frac_bits = options.frac_bits;
   int classes = options.classes;
   int test_size = test_labels.size();
+
+  std::cout<<"test_size : "<<test_size<<"\n";
+  std::cout<<"test_input_transpose size : "<<test_input_transpose.size()<<"\n";
+  std::cout<<"test_labels : "<<test_labels.size()<<"\n";
+  std::cout<<"theta size : "<<theta.size()<<"\n";
+
 
   std::vector<std::uint64_t> encoded_test_input(test_input.size(), 0);
   std::transform(test_input.begin(), test_input.end(), encoded_test_input.begin(), [frac_bits](auto j) {
@@ -328,14 +371,13 @@ int test_accuracy(std::vector<std::uint64_t>theta, const Options& options) {
   int size_single_input = test_input.size() / test_size;
   std::vector<std::uint64_t> dot_product(test_size * classes, 0);
   std::vector<std::uint64_t> dot_product_decoded(test_size * classes, 0);
-
+   
   dot_product = MOTION::matrix_multiply(classes, size_single_input, test_size, theta, encoded_test_input_transpose);
   std::transform(dot_product.begin(), dot_product.end(), dot_product_decoded.begin(),
                  [frac_bits](auto j) {
                    return MOTION::new_fixed_point::decode<std::uint64_t, float>(j, frac_bits);
                  });
 
- 
   std::vector<std::uint64_t> sigmoid_dp(test_size * classes, 0);
   std::transform(dot_product_decoded.begin(), dot_product_decoded.end(), sigmoid_dp.begin(),
                  [frac_bits](auto j) { return sigmoid(j, frac_bits); });
@@ -344,9 +386,13 @@ int test_accuracy(std::vector<std::uint64_t>theta, const Options& options) {
   for (int i = 0; i < test_size; i++) {
     for (int j = 0; j < classes; j++) {
       auto data = sigmoid_dp[j * test_size + i];
+      std::cout<<data<<" ";
     sigmoid_dp_transpose.push_back(data);
     }
+    std::cout<<"\n";
   }
+
+  std::cout<<"\n";
 
   float max = -1.0;
   int argmax = 0;
@@ -384,15 +430,16 @@ int test_accuracy(std::vector<std::uint64_t>theta, const Options& options) {
 
 int main(int argc, char* argv[]) {
   
+  auto start = std::chrono::high_resolution_clock::now();
   auto options = parse_program_options(argc, argv);
   std::vector<float> row_major_input, column_major_input;
 
-  int frac_bits=options->frac_bits;
+  int frac_bits = options->frac_bits;
   int classes = options -> classes;
 
   std::vector<std::uint64_t> theta_current;
 
-  int iterations = 20000;
+  int iterations = 1;
   for(int i=0;i<iterations;i++) { 
     cout << i << endl;  
     read_input(row_major_input,column_major_input,*options);
@@ -406,7 +453,7 @@ int main(int argc, char* argv[]) {
       std::uint64_t maxNumber = 8192;
 
       std::uniform_int_distribution<std::uint64_t> distribution(minNumber, maxNumber);
-      theta_current.assign(size_single_input * classes, 0);
+      //theta_current.assign(size_single_input * classes, 0);
 
       for(int i=0; i<size_single_input * classes; i++) {   
         int x = distribution(gen);
@@ -429,31 +476,26 @@ int main(int argc, char* argv[]) {
     row_major_input.clear();
     column_major_input.clear();
   }
-  std::vector<float>theta;
 
-  std::string home_dir=std::getenv("BASE_DIR");
-  std::string path =  home_dir + "/build_debwithrelinfo_gcc/Theta_new";
-  std::ifstream file;
 
-  file.open(path);
-  std::string str;
-  int line = 0;
-
-  if(std::getline(file, str)) {
-    std::stringstream obj(str);
-    std::string temp;
-    while(std::getline(obj, temp, ',')) {
-      auto input = std::stof(temp);
-      theta.push_back(input);
+  // for printing theta
+  int k = 783;
+  int z = 1;
+  std::cout << "theta_current: \n";
+  for (int i = 0; i < theta_current.size(); i++) {
+    std::cout << MOTION::new_fixed_point::decode<std::uint64_t, float>(theta_current[i],
+                                                                       frac_bits) << ",";
+      if (i > k) {
+      std::cout<< "********************************\n \n \n*************************************";
+        z = z + 1;
+        k = z * 784 - 1;
+      }
     }
-    line++;
-  }
-  file.close();
 
-  std::vector<std::uint64_t> encoded_theta(theta.size());
-  std::transform(theta.begin(), theta.end(), encoded_theta.begin(), [frac_bits](auto j) {
-    return MOTION::new_fixed_point::encode<std::uint64_t, float>(j, frac_bits);
-  });
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    std::cout<<"duration: "<<duration.count()<<"\n";
+  
   
   int accuracy = test_accuracy(theta_current, *options);
   std::cout << "\nAccuracy: " << accuracy << "\n";

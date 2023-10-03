@@ -6,15 +6,17 @@ from bash file we are giving ip1 and in this file it is appended to ip1_0 and ip
 
 At the argument "--filepath " give the path of the file containing shares from build_deb.... folder
 Server-0
-./bin/read_image_shares --my-id 0 --party 0,::1,7002 --party 1,::1,7000 --fractional-bits 13
---layer-id 1 --current-path ${BASE_DIR}/build_debwithrelinfo_gcc --config-file-input
-remote_image_shares --weights-file newW1 --bias-file newB1
+./bin/constant_model_neural_network --my-id 0 --party 0,::1,7002 --party 1,::1,7000
+--fractional-bits 13 --layer-id 1 --current-path ${BASE_DIR}/build_debwithrelinfo_gcc
+--config-file-input remote_image_shares --weights-file newW1 --bias-file newB1 --boolean-protocol
+yao --arithmetic-protocol beavy
 
 
 Server-1
-./bin/read_image_shares --my-id 1 --party 0,::1,7002 --party 1,::1,7000 --fractional-bits 13
---layer-id 1 --current-path ${BASE_DIR}/build_debwithrelinfo_gcc --config-file-input
-remote_image_shares --weights-file newW1 --bias-file newB1
+./bin/constant_model_neural_network --my-id 1 --party 0,::1,7002 --party 1,::1,7000
+--fractional-bits 13 --layer-id 1 --current-path ${BASE_DIR}/build_debwithrelinfo_gcc
+--config-file-input remote_image_shares --weights-file newW1 --bias-file newB1 --boolean-protocol
+yao --arithmetic-protocol beavy
 
 */
 // MIT License
@@ -64,6 +66,9 @@ remote_image_shares --weights-file newW1 --bias-file newB1
 
 #include <boost/thread/thread.hpp>
 #include <chrono>
+#include "algorithm/circuit_loader.h"
+#include "base/gate_factory.h"
+#include "base/two_party_backend.h"
 #include "base/two_party_tensor_backend.h"
 #include "communication/message_handler.h"
 #include "protocols/beavy/tensor.h"
@@ -170,9 +175,10 @@ struct Options {
   std::vector<float> W_data;
   std::uint64_t W_row = 0, W_col = 0;
   std::uint64_t B_row = 0, B_col = 0;
-  std::vector<std::uint64_t> finalDelta;
   std::string weights_file;
   std::string bias_file;
+  MOTION::MPCProtocol arithmetic_protocol;
+  MOTION::MPCProtocol boolean_protocol;
 };
 
 // this function reads all lines but takes into consideration only the required input
@@ -278,8 +284,10 @@ int read_W_csv(Options* options, std::string W_path) {
 
     while (std::getline(lineStream, cell, ',')) {
       options->W_data.push_back(stof(cell));
+      //   std::cout << stof(cell) << " ";
     }
   }
+  //   std::cout << "\n";
 
   file.close();
   file.open(W_path);
@@ -294,6 +302,8 @@ int read_W_csv(Options* options, std::string W_path) {
   int total_size = options->W_data.size();
   options->W_col = total_size / (options->W_row);
 
+  std::cout << "W rows : " << options->W_row << "\n";
+  std::cout << "W col : " << options->W_col << "\n";
   file.close();
 }
 
@@ -329,8 +339,10 @@ int read_B_csv(Options* options, std::string B_path) {
 
     while (std::getline(lineStream, cell, ',')) {
       options->B_data.push_back(stof(cell));
+      std::cout << stof(cell) << " ";
     }
   }
+  std::cout << "\n";
 
   file.close();
   file.open(B_path);
@@ -342,7 +354,7 @@ int read_B_csv(Options* options, std::string B_path) {
       options->B_row++;
     }
   }
-  // std::cout << "B rows:" << options->B_row << "\n";
+  std::cout << "B rows:" << options->B_row << "\n";
   options->B_col = 1;
 
   file.close();
@@ -401,8 +413,8 @@ std::optional<Options> parse_program_options(int argc, char* argv[]) {
     ("no-run", po::bool_switch()->default_value(false), "just build the circuit, but not execute it")
     ("weights-file", po::value<std::string>()->required(), "weights csv file")
     ("bias-file", po::value<std::string>()->required(), "biass csv file")
-
-
+    ("arithmetic-protocol", po::value<std::string>()->required(), "2PC protocol (GMW or BEAVY)")
+    ("boolean-protocol", po::value<std::string>()->required(), "2PC protocol (Yao, GMW or BEAVY)")
     ;
   // //clang-format on
 
@@ -444,6 +456,30 @@ std::optional<Options> parse_program_options(int argc, char* argv[]) {
     std::cerr << "my-id must be one of 0 and 1\n";
     return std::nullopt;
   }
+
+    auto arithmetic_protocol = vm["arithmetic-protocol"].as<std::string>();
+  boost::algorithm::to_lower(arithmetic_protocol);
+  if (arithmetic_protocol == "gmw") {
+    options.arithmetic_protocol = MOTION::MPCProtocol::ArithmeticGMW;
+  } else if (arithmetic_protocol == "beavy") {
+    options.arithmetic_protocol = MOTION::MPCProtocol::ArithmeticBEAVY;
+  } else {
+    std::cerr << "invalid protocol: " << arithmetic_protocol << "\n";
+    return std::nullopt;
+  }
+  auto boolean_protocol = vm["boolean-protocol"].as<std::string>();
+  boost::algorithm::to_lower(boolean_protocol);
+  if (boolean_protocol == "yao") {
+    options.boolean_protocol = MOTION::MPCProtocol::Yao;
+  } else if (boolean_protocol == "gmw") {
+    options.boolean_protocol = MOTION::MPCProtocol::BooleanGMW;
+  } else if (boolean_protocol == "beavy") {
+    options.boolean_protocol = MOTION::MPCProtocol::BooleanBEAVY;
+  } else {
+    std::cerr << "invalid protocol: " << boolean_protocol << "\n";
+    return std::nullopt;
+  }
+
 
   //////////////////////////////////////////////////////////////////
   file_read(&options);
@@ -505,321 +541,127 @@ void print_stats(const Options& options,
   }
 }
 
-template <typename E>
-std::uint64_t RandomNumDistribution(E& engine) {
-  std::uniform_int_distribution<unsigned long long> distribution(
-      std::numeric_limits<std::uint64_t>::min(), std::numeric_limits<std::uint64_t>::max());
-  return distribution(engine);
+auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBackend& backend) {
+  std::cout << "Inside create_composite"
+            << "\n";
+  // retrieve the gate factories for the chosen protocols
+  auto& arithmetic_tof = backend.get_tensor_op_factory(options.arithmetic_protocol);
+  auto& boolean_tof = backend.get_tensor_op_factory(MOTION::MPCProtocol::Yao);
+
+  const MOTION::tensor::GemmOp gemm_op1 = {
+      .input_A_shape_ = {options.W_row, options.W_col},
+      .input_B_shape_ = {options.image_file.row, options.image_file.col},
+      .output_shape_ = {options.W_row, options.image_file.col}};
+
+ const auto X_dims = gemm_op1.get_input_B_tensor_dims();
+    //  const auto X_dims = options.image_file.row;
+
+  /////////////////////////////////////////////////////////////////////////
+  MOTION::tensor::TensorCP tensor_X, tensor_W1, tensor_B1;
+  MOTION::tensor::TensorCP gemm_output1, add_output1;
+
+  auto pairX = arithmetic_tof.make_arithmetic_64_tensor_input_shares(X_dims);
+  std::vector<ENCRYPTO::ReusableFiberPromise<MOTION::IntegerValues<uint64_t>>> input_promises_X =
+      std::move(pairX.first);
+  tensor_X = pairX.second;
+  
+  ///////////////////////////////////////////////////////////////
+  input_promises_X[0].set_value(options.image_file.Delta);
+  input_promises_X[1].set_value(options.image_file.delta);
+
+  ///////////////////////////////////////////////////////////////////
+
+  gemm_output1 =
+      arithmetic_tof.make_tensor_gemm_op(gemm_op1, tensor_W1, tensor_X, options.fractional_bits);
+  add_output1 = arithmetic_tof.make_tensor_add_op(gemm_output1, tensor_B1);
+
+  ENCRYPTO::ReusableFiberFuture<std::vector<std::uint64_t>> output_future, main_output_future,
+      main_output;
+
+  if (options.my_id == 0) {
+    arithmetic_tof.make_arithmetic_tensor_output_other(tensor_X);
+  } else {
+    main_output_future = arithmetic_tof.make_arithmetic_64_tensor_output_my(tensor_X);
+  }
+
+  return std::move(main_output_future);
 }
 
-int read_shares(const Options& options,
-                 std::pair<std::vector<uint64_t>, std::vector<uint64_t>>& message) {
-  auto frac_bits = options.fractional_bits;
-  auto my_id = options.my_id;
-
-  try {
-      if(options.W_col!=options.image_file.row)
-  {
-     std::cout<<"Weight's column and image's row donot match ! \n";
-  }
-  } catch (std::ifstream::failure e) {
-    std::cerr << "Error in dimensions of matrices.\n";
-    return EXIT_FAILURE;
-  }
-
-  int size_of_weights = options.W_col * options.W_row;
-  std::vector<uint64_t> W_encoded(size_of_weights, 0);
-  std::transform(std::begin(options.W_data), std::end(options.W_data), std::begin(W_encoded),
-                 [frac_bits](auto j) {
-                   return MOTION::new_fixed_point::encode<std::uint64_t, float>(j, frac_bits);
-                 });
-
-  // //gmw share generation
-  std::vector<uint64_t> Delta_encoded(options.W_row * 1, 0);
-  Delta_encoded =
-      MOTION::matrix_multiply(options.W_row, options.W_col, 1, W_encoded, options.image_file.Delta);
-  std::vector<uint64_t> delta_encoded(options.W_row * 1, 0);
-  delta_encoded =
-      MOTION::matrix_multiply(options.W_row, options.W_col, 1, W_encoded, options.image_file.delta);
-
-  std::vector<uint64_t> gmw_x_encoded(options.W_row * 1, 0);
-  std::transform(Delta_encoded.begin(), Delta_encoded.end(), gmw_x_encoded.begin(),
-                 [&my_id](auto& c) { return c * my_id; });
-
-  // //gmw share = gmw_x_encoded
-  __gnu_parallel::transform(gmw_x_encoded.begin(), gmw_x_encoded.end(), delta_encoded.begin(),
-                            gmw_x_encoded.begin(), std::minus{});
-
-  // //truncate gmw share
-  std::vector<uint64_t> gmw_x_decoded(options.W_row * 1, 0);
-  std::transform(std::begin(gmw_x_encoded), std::end(gmw_x_encoded), std::begin(gmw_x_decoded),
-                 [frac_bits](auto j) { return MOTION::new_fixed_point::truncate(j, frac_bits); });
-
-  // //generation of delta shares
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::vector<uint64_t> delta_decoded(options.W_row * 1, 0);
-  std::transform(delta_decoded.begin(), delta_decoded.end(), delta_decoded.begin(),
-                 [&gen](auto j) { return RandomNumDistribution(gen); });
-
-  std::vector<uint64_t> Delta_decoded(options.W_row * 1, 0);
-  __gnu_parallel::transform(gmw_x_decoded.begin(), gmw_x_decoded.end(), delta_decoded.begin(),
-                            Delta_decoded.begin(), std::plus{});
-
-  message.first = Delta_decoded;
-  message.second = delta_decoded;
-  // std::cout << "Size of weights:" << size_of_weights << "\n";
-  // std::cout << "length of W_encoded:" << W_encoded.size() << "\n";
-  // std::cout << "length of B_encoded:" << B_encoded.size() << "\n";
-  // std::cout << "length of gmw_x_encoded:" << gmw_x_encoded.size() << "\n";
-  // std::cout << "length of gmw_x_decoded:" << gmw_x_decoded.size() << "\n";
-  // std::cout << "length of Delta_decoded:" << Delta_decoded.size() << "\n";
-  // std::cout << "length of delta_decoded:" << delta_decoded.size() << "\n";
-}
-
-std::uint64_t getuint64(std::vector<std::uint8_t>& message, int index) {
-  // //Converts 8->64
-  std::uint64_t num = 0;
-  for (auto i = 0; i < 8; i++) {
-    num = num << 8;
-    num = num | message[(index + 1) * 8 - 1 - i];
-  }
-  return num;
-}
-
-void adduint64(std::uint64_t num, std::vector<std::uint8_t>& message) {
-  // //Converts 64->8
-  for (auto i = 0; i < sizeof(num); i++) {
-    std::uint8_t byte = num & 0xff;
-    message.push_back(byte);
-    num = num >> 8;
-  }
-}
-
-class TestMessageHandler : public MOTION::Communication::MessageHandler {
-  void received_message(std::size_t party_id, std::vector<std::uint8_t>&& message) override {
-    std::cout << "Message received from party " << party_id << "\n";
-    std::cout << "Message size:" << message.size() << "\n";
-    auto message_size = message.size();
-
-    if (flag0 == false && flag1 == false) {
-      std::cout << "Message1 after receiving from party 0 :\n";
-      for (int i = 0; i < message_size / 8; i++) {
-        auto temp = getuint64(message, i);
-        Delta_otherid.push_back(temp);
-        // std::cout << "Delta_otherid: " << Delta_otherid[i] << "\n";
-      }
-      flag1 = true;
-    } else if (flag0 == false && flag1 == true) {
-      std::cout << "Message1 after receiving from party 1 :\n";
-      for (int i = 0; i < message_size / 8; i++) {
-        auto temp = getuint64(message, i);
-        Delta_otherid.push_back(temp);
-        // std::cout << "Delta_otherid: " << Delta_otherid[i] << "\n";
-      }
-      flag0 = true;
+void run_composite_circuit(const Options& options, MOTION::TwoPartyTensorBackend& backend) {
+  auto output_future = create_composite_circuit(options, backend);
+  backend.run();
+  if (options.my_id == 1) {
+    auto interm = output_future.get();
+    std::cout<<"The output is : \n";
+    //   std::vector<long double> mod_x;
+    //   // std::string path = std::filesystem::current_path();
+    //   std::string path = options.currentpath;
+    //   string filename = path + "/" + "output_tensor";
+    //   std::ofstream x;
+    //   x.open(filename, std::ios_base::app);
+    //   x << options.imageprovider << "\n";
+    for (int i = 0; i < interm.size(); ++i) {
+      long double temp =
+          MOTION::new_fixed_point::decode<uint64_t, long double>(interm[i], options.fractional_bits);
+      //     mod_x.push_back(temp);
+      std::cout << temp << ",";
+      // if (options.layer_id == 2) {
+      //   std::cout << temp << ",";
+      // }
     }
   }
-};
-
-int compute_arithmetic_shares(
-    std::pair<std::vector<uint64_t>, std::vector<std::uint64_t>> myshares, Options& options) {
-  std::vector<std::uint64_t> Delta_myid = myshares.first;
-  std::vector<std::uint64_t> delta_myid = myshares.second;
-  auto frac_bits = options.fractional_bits;
-  // //global variables : Delta_otherid , Delta
-  options.finalDelta = Delta_myid;
-  // // Delta of both the parties
-  __gnu_parallel::transform(Delta_myid.begin(), Delta_myid.end(), Delta_otherid.begin(),
-                            options.finalDelta.begin(), std::plus{});
-
-  std::vector<std::uint64_t> encoded_B(options.B_row, 1);
-  std::transform(options.B_data.begin(), options.B_data.end(), encoded_B.begin(),
-                 [frac_bits](auto j) {
-                   return MOTION::new_fixed_point::encode<std::uint64_t, float>(j, frac_bits);
-                 });
-
-  // //adding bias to weights
-  __gnu_parallel::transform(options.finalDelta.begin(), options.finalDelta.end(), encoded_B.begin(),
-                            options.finalDelta.begin(), std::plus{});
-
-  std::ofstream file;
-  auto output_file_path = options.currentpath + "/server" + std::to_string(options.my_id) +
-                          "/outputshare_" + std::to_string(options.my_id);
-
-  std::cout << "output file path : " << output_file_path << "\n";
-  
-
-  try {
-    
-    file.open(output_file_path, std::ios_base::out);
-
-    if (file) {
-      std::cout << "outputshare file found\n";
-    } else {
-      std::cout << "outputshare file not found\n";
-    }
-  } catch (std::ifstream::failure e) {
-    std::cerr << "Error while opening the image share file.\n";
-    return EXIT_FAILURE;
-  }
-
-  file << options.B_row << " " << options.B_col << "\n";
-  for (int i = 0; i < options.finalDelta.size(); i++) {
-    file << options.finalDelta[i] << " " << delta_myid[i] << "\n";
-  }
-  file.close();
-  
-  //file_config_input 
-  std::string path_for_next_operation;
-  path_for_next_operation=options.currentpath+"/file_config_input"+std::to_string(options.my_id);
-  
-  file.open(path_for_next_operation,std::ios_base::out);
-  file<<output_file_path;
-  
-  file.close();
 }
 
-void reconstruct_ans(std::pair<std::vector<uint64_t>, std::vector<std::uint64_t>> myshares,
-                     Options& options) {
-  std::vector<std::uint64_t> delta_0 = myshares.second;
-  auto frac_bits = options.fractional_bits;
-
-  // // global variables : delta1 , Delta
-  std::vector<std::uint64_t> output_share(options.W_row, 0);
-  std::vector<std::uint64_t> temp(options.W_row, 0);
-  __gnu_parallel::transform(options.finalDelta.begin(), options.finalDelta.end(), delta_0.begin(),
-                            temp.begin(), std::minus{});
-  __gnu_parallel::transform(temp.begin(), temp.end(), delta_1.begin(), output_share.begin(),
-                            std::minus{});
-
-  std::vector<float> final_share(options.W_row, 0.0);
-  std::transform(std::begin(output_share), std::end(output_share), std::begin(final_share),
-                 [frac_bits](auto j) {
-                   return MOTION::new_fixed_point::decode<std::uint64_t, float>(j, frac_bits);
-                 });
-
-  std::cout << "Output:-\n";
-  for (int i = 0; i < final_share.size(); i++) {
-    std::cout << final_share[i] << "\n";
-  }
-}
-
-int main(int argc, char* argv[]) {
-  std::cout<<"Inside constant_mult_model.cpp\n";
-  auto start = std::chrono::high_resolution_clock::now();
+int main(int argc, char* argv[]) 
+{
   auto options = parse_program_options(argc, argv);
+  int WriteToFiles = 1;
   if (!options.has_value()) {
     return EXIT_FAILURE;
   }
-
-  std::unique_ptr<MOTION::Communication::CommunicationLayer> comm_layer;
-  std::shared_ptr<MOTION::Logger> logger;
-  try {
-    try {
-      MOTION::Communication::TCPSetupHelper helper(options->my_id, options->tcp_config);
-      comm_layer = std::make_unique<MOTION::Communication::CommunicationLayer>(
-          options->my_id, helper.setup_connections());
-    } catch (std::runtime_error& e) {
-      std::cerr << "Error occurred during connection setup: " << e.what() << "\n";
-      return EXIT_FAILURE;
-    }
-    try {
-      logger = std::make_shared<MOTION::Logger>(options->my_id,
-                                                boost::log::trivial::severity_level::trace);
-      comm_layer->set_logger(logger);
-    } catch (std::runtime_error& e) {
-      std::cerr << "Error occurred during logger setup: " << e.what() << "\n";
-      return EXIT_FAILURE;
-    }
-    try {
-      comm_layer->start();
-    } catch (std::runtime_error& e) {
-      std::cerr << "Error occurred while starting the communication: " << e.what() << "\n";
-      return EXIT_FAILURE;
-    }
-
-    comm_layer->register_fallback_message_handler(
-        [](auto party_id) { return std::make_shared<TestMessageHandler>(); });
-
-    // //read shares from compute server
-    std::pair<std::vector<uint64_t>, std::vector<uint64_t>> message;
-    std::cout << "before read_shares \n";
-    read_shares(*options, message);
-    std::cout << "after read_shares \n";
-
-    // //convert Delta(uint64_t) to Delta(std::vector<std::uint8_t>)
-    std::vector<std::uint64_t> Delta_i = message.first;
-    std::vector<std::uint8_t> message_byte;
-
-    for (int i = 0; i < Delta_i.size(); i++) {
-      // std::cout << Delta_i[i] << " ";
-      adduint64(Delta_i[i], message_byte);
-    }
-
-    try {
-      // std::cout << "message size before sending:" << ackn.size() << "\n";
-      if (options->my_id == 0) {
-        std::cout << "sending message from party 0 \n";
-        comm_layer->send_message(1, message_byte);
-        std::cout << "message from party 0 sent \n";
-
-      } else if (options->my_id == 1) {
-        while (!flag1) {
-          std::cout << ".";
-          boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
-        }
-
-        std::cout << "message(shares) recieved from party 0\n";
-
-        std::cout << "sending message from party 1 \n";
-        comm_layer->send_message(0, message_byte);
-        std::cout << "message from party 1 sent \n";
-      }
-
-    } catch (std::runtime_error& e) {
-      std::cerr << "Error occurred while sending the weight shares to helper node: " << e.what()
-                << "\n";
-      return EXIT_FAILURE;
-    }
-
-    std::cout << "Parties waiting\n";
-    while (!flag0 && !flag1) {
-      std::cout << ".";
-      boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
-    }
-    std::cout << "Both parties ready to compute\n";
-    compute_arithmetic_shares(message, *options);
-
+   try {
+auto comm_layer = setup_communication(*options);
+    auto logger = std::make_shared<MOTION::Logger>(options->my_id,
+                                                   boost::log::trivial::severity_level::trace);
+    comm_layer->set_logger(logger);
+    MOTION::Statistics::AccumulatedRunTimeStats run_time_stats;
+    MOTION::Statistics::AccumulatedCommunicationStats comm_stats;
+    MOTION::TwoPartyTensorBackend backend(*comm_layer, options->threads,
+                                          options->sync_between_setup_and_online, logger);
+    run_composite_circuit(*options, backend);
+    comm_layer->sync();
+    comm_stats.add(comm_layer->get_transport_statistics());
+    comm_layer->reset_transport_statistics();
+    run_time_stats.add(backend.get_run_time_stats());
+    testMemoryOccupied(WriteToFiles, options->my_id, options->currentpath);
     comm_layer->shutdown();
-    auto stop = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    print_stats(*options, run_time_stats, comm_stats);
+    if (WriteToFiles == 1) {
+      /////// Generate path for the AverageTimeDetails file and MemoryDetails file
+      // std::string path = std::filesystem::current_path();
+      std::string path = options->currentpath;
+      std::string t1 = path + "/" + "AverageTimeDetails" + std::to_string(options->my_id);
+      std::string t2 = path + "/" + "MemoryDetails" + std::to_string(options->my_id);
 
-    std::cout << "Duration:" << duration.count() << "\n";
+      ///// Write to the AverageMemoryDetails files
+      std::ofstream file2;
+      file2.open(t2, std::ios_base::app);
+      std::string time_str =
+          MOTION::Statistics::print_stats_short("tensor_gt_mul_test", run_time_stats, comm_stats);
+      std::cout << "Execution time string:" << time_str << "\n";
+      double exec_time = std::stod(time_str);
+      std::cout << "Execution time:" << exec_time << "\n";
+      file2 << "Execution time - " << exec_time << "msec\n";
+      file2.close();
 
-    std::string t1 = options->currentpath + "/" + "AverageTimeDetails0";
-    std::string t2 = options->currentpath + "/" + "MemoryDetails0";
-
-    std::ofstream file2;
-    file2.open(t2, std::ios_base::app);
-    if (!file2.is_open()) {
-      std::cerr << "Unable to open the MemoryDetails file.\n";
-    } else {
-      file2 << "Execution time - " << duration.count() << "msec";
-      file2 << "\n";
-    }
-    file2.close();
-
-    std::ofstream file1;
-    file1.open(t1, std::ios_base::app);
-    if (!file1.is_open()) {
-      std::cerr << "Unable to open the AverageTimeDetails file.\n";
-    } else {
-      file1 << duration.count();
+      std::ofstream file1;
+      file1.open(t1, std::ios_base::app);
+      file1 << exec_time;
       file1 << "\n";
+      file1.close();
     }
-    file1.close();
-  } catch (std::runtime_error& e) {
+   }
+   catch (std::runtime_error& e) {
     std::cerr << "ERROR OCCURRED: " << e.what() << "\n";
     return EXIT_FAILURE;
   }

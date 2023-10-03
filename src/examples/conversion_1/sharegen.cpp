@@ -203,11 +203,11 @@ void actual_share_generation(std::ifstream& indata, int rows, int columns) {
   p += "/server0/Image_shares/Theta";
   q += "/server1/Image_shares/Theta";
   std::ofstream file1, file2;
-  file1.open(p, std::ios_base::out);
+  file1.open(p, std::ios_base::app);
   if (!file1) {
     std::cerr << " Error in reading file 1\n";
   }
-  file2.open(q, std::ios_base::out);
+  file2.open(q, std::ios_base::app);
   if (!file2) {
     std::cerr << " Error in reading file 2\n";
   }
@@ -259,33 +259,127 @@ void actual_share_generation(std::ifstream& indata, int rows, int columns) {
   return;
 }
 
+void actual_label_share(std::vector<float> a) {
+  std::cout << " a size :" << a.size() << "\n";
+  auto p = std::filesystem::current_path();
+  auto q = std::filesystem::current_path();
+  // p += "/ShareFiles/X9_n.csv";
+  p += "/server0/Image_shares/Actual_all_labels";
+  q += "/server1/Image_shares/Actual_all_labels";
+  std::ofstream file1, file2;
+  file1.open(p, std::ios_base::app);
+  if (!file1) {
+    std::cerr << " Error in reading file 1\n";
+  }
+  file2.open(q, std::ios_base::app);
+  if (!file2) {
+    std::cerr << " Error in reading file 2\n";
+  }
+  if (file1.is_open()) {
+    file1 << 10;
+    file1 << " ";
+
+    file1 << 20;
+    file1 << "\n";
+  }
+  if (file2.is_open()) {
+    file2 << 10;
+    file2 << " ";
+
+    file2 << 20;
+    file2 << "\n";
+  }
+  // Now that we have data, need to generate the shares
+  for (int i = 0; i < a.size(); i++) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uint64_t del0 = blah(gen);
+    std::uint64_t del1 = blah(gen);
+
+    std::uint64_t Del = del0 + del1 + MOTION::fixed_point::encode<uint64_t, float>(a[i], 13);
+
+    //////////Writing shares for server 0//////////////
+    if (file1.is_open()) {
+      file1 << Del;
+      file1 << " ";
+
+      file1 << del0;
+      file1 << "\n";
+    }
+
+    //////////Writing shares for server 1//////////////
+    if (file2.is_open()) {
+      file2 << Del;
+      file2 << " ";
+
+      file2 << del1;
+      file2 << "\n";
+    }
+  }
+
+  file1.close();
+  file2.close();
+
+  return;
+}
+
 int main() {
   std::cout << "Inside main";
-  // std::vector<int> Xindex = {2, 5, 14, 29, 31, 37, 39, 40, 3, 10, 13, 25, 28, 55, 69, 71};  //
-  // this int k = 1; int index = 1; // this for (int k : Xindex) {
-  //   auto p = std::filesystem::current_path();
-  //    p += "/ShareFiles/X9_n.csv";
-  //   std::cout << "k:" << k << "\n";
   std::string home_dir = getenv("BASE_DIR");
-  // std::string p = home_dir + "/data/ImageProvider/images/X" + std::to_string(k) + ".csv";  //
-  std::string p = home_dir + "/data/ImageProvider/images/filled_nonzeros.csv";
-  std::cout << p;
+
+  std::string p = home_dir + "/data/ImageProvider/sample_data/";
   std::ifstream indata;
-  indata.open(p);
-  if ((std::ifstream(p)))
-    cout << "File found";
-  else
-    cout << "File not found";
+
+  std::vector<float> actual_data;
+  int k = 1;
+  int count = 0;
+  for (int i = 0; i < 10; i++) {
+    while (count < 2) {
+      std::string path =
+          p + "images_folder" + std::to_string(i) + "/X" + std::to_string(k) + ".csv";
+      std::cout << path << "\n";
+      indata.open(path);
+      if ((std::ifstream(path)))
+        cout << "File found\n\n";
+      else
+        cout << "File not found\n\n";
+
+      share_generation(indata, 784, 1, k);
+      indata.close();
+      k++;
+      count++;
+      path = "";
+    }
+    for (int j = 0; j < 20; j++) {
+      if (j == (2 * i) || (j == (2 * i + 1))) {
+        std::cout << "1 ";
+        actual_data.push_back(1);
+      } else {
+        std::cout << "0 ";
+        actual_data.push_back(0);
+      }
+    }
+    std::cout << "\n";
+    count = 0;
+  }
+
+  actual_label_share(actual_data);
+
+  // indata.open(p);
+  // if ((std::ifstream(p)))
+  //   cout << "File found";
+  // else
+  //   cout << "File not found";
   // int rows = 784;  //,columns;  this
   // indata >> rows;
   // indata >> columns;
-  int rows = 784;
+  // int rows = 784;
 
   // share_generation(indata, rows, 1, index);  // this
-  // index = index + 1;                         // this
-  actual_share_generation(indata, rows, 1);
+  // index = index + 1;
+  // this
 
-  indata.close();
+  // indata.close();
   //}  // this
   return EXIT_SUCCESS;
 }
