@@ -1,6 +1,6 @@
 // ./bin/logistic_regression_10 --sample-file sample_file --actual-label-file actual_label
 // --fractional-bits 13 --sample-size 20 --classes 10
-// 1000 - 80, 10000 - 91, 15000 - 94
+// 1000 - 80, 10000 - 87.36 , 15000 - 87.48
 #include <algorithm>
 #include <bitset>
 #include <chrono>
