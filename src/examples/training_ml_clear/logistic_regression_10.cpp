@@ -1,4 +1,4 @@
-// ./bin/machine_learning_10 --sample-file sample_file --actual-label-file actual_label
+// ./bin/logistic_regression_10 --sample-file sample_file --actual-label-file actual_label
 // --fractional-bits 13 --sample-size 20 --classes 10
 // 1000 - 80, 10000 - 91, 15000 - 94
 #include <algorithm>
@@ -151,7 +151,8 @@ uint64_t sigmoid(uint64_t dot_product, int frac_bits) {
   }
 }
 
-std::vector<std::uint64_t> find_weights(std::vector<float> row_major_input,std::vector<float>column_major_input,std::vector<std::uint64_t>theta_current,Options& options, bool write_to_file) {
+std::vector<std::uint64_t> find_weights(std::vector<float> row_major_input,std::vector<float>column_major_input,std::vector<std::uint64_t>theta_current,Options& options, bool write_to_file) { 
+
   int frac_bits=options.frac_bits;
   int m = options.m;
   int classes = options.classes;
@@ -309,9 +310,9 @@ void read_test_data(std::vector<float>&test_input, std::vector<float>& test_inpu
   std::ifstream file;
   std::string path = home_dir + "/data/ImageProvider/images_actualanswer";
   std::string input_path;
-  int test_size = 100;
+  int test_size = 10000;
 
-  for (int i = 0; i < test_size; i++) {
+  for (int i = 1; i <= test_size; i++) {
     input_path = path + "/X" + std::to_string(i) + ".csv";
     file.open(input_path);
     std::string str;
@@ -439,7 +440,7 @@ int main(int argc, char* argv[]) {
 
   std::vector<std::uint64_t> theta_current;
 
-  int iterations = 1;
+  int iterations = 15000;
   for(int i=0;i<iterations;i++) { 
     cout << i << endl;  
     read_input(row_major_input,column_major_input,*options);
@@ -453,7 +454,7 @@ int main(int argc, char* argv[]) {
       std::uint64_t maxNumber = 8192;
 
       std::uniform_int_distribution<std::uint64_t> distribution(minNumber, maxNumber);
-      //theta_current.assign(size_single_input * classes, 0);
+      theta_current.assign(size_single_input * classes, 0);
 
       for(int i=0; i<size_single_input * classes; i++) {   
         int x = distribution(gen);
@@ -479,18 +480,18 @@ int main(int argc, char* argv[]) {
 
 
   // for printing theta
-  int k = 783;
-  int z = 1;
-  std::cout << "theta_current: \n";
-  for (int i = 0; i < theta_current.size(); i++) {
-    std::cout << MOTION::new_fixed_point::decode<std::uint64_t, float>(theta_current[i],
-                                                                       frac_bits) << ",";
-      if (i > k) {
-      std::cout<< "********************************\n \n \n*************************************";
-        z = z + 1;
-        k = z * 784 - 1;
-      }
-    }
+  // int k = 783;
+  // int z = 1;
+  // std::cout << "theta_current: \n";
+  // for (int i = 0; i < theta_current.size(); i++) {
+  //   std::cout << MOTION::new_fixed_point::decode<std::uint64_t, float>(theta_current[i],
+  //                                                                      frac_bits) << ",";
+  //     if (i > k) {
+  //     std::cout<< "********************************\n \n \n*************************************";
+  //       z = z + 1;
+  //       k = z * 784 - 1;
+  //     }
+  //   }
 
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
