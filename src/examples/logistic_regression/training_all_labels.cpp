@@ -612,7 +612,7 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
 
   
   std::function<MOTION::tensor::TensorCP(const MOTION::tensor::TensorCP&)> make_activation,make_relu;
-  std::function<MOTION::tensor::TensorCP(const MOTION::tensor::TensorCP&), std::size_t> make_indicator, make_sigmoid;
+  std::function<MOTION::tensor::TensorCP(const MOTION::tensor::TensorCP&, std::size_t)> make_indicator, make_sigmoid;
   // -RELU(-X)u
   make_activation = [&](const auto& input) {
   //  const auto negated_tensor = arithmetic_tof.make_tensor_negate(input);
