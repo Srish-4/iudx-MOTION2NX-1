@@ -1,17 +1,23 @@
 /*
-This code reads shares from build_debwithrelinfo/ShareFiles/A.txt and
-build_debwithrelinfo/ShareFiles/B.txt and performs a ReLU operation on them.
-If this code is run with a function to write output shares (in tensor_op.cpp)
-output shares of this will be written. The following instructions run this code.
+inputpath changed to imageprovider
+imageprovider is file name inside server 0 and server 1 respectively
+eg. (ip1_0 , ip1_1) , (ip2_0,ip2_1) and so on..
+from bash file we are giving ip1 and in this file it is appended to ip1_0 and ip1_1
 
 At the argument "--filepath " give the path of the file containing shares from build_deb.... folder
 Server-0
-./bin/tensor_gt_relu --my-id 0 --party 0,::1,7002 --party 1,::1,7000 --arithmetic-protocol beavy
---boolean-protocol yao --fractional-bits 13 --filepath file_config_input0
+./bin/constant_model_neural_network --my-id 0 --party 0,::1,7002 --party 1,::1,7000
+--fractional-bits 13 --layer-id 1 --current-path ${BASE_DIR}/build_debwithrelinfo_gcc
+--config-file-input remote_image_shares --weights-file newW1 --bias-file newB1 --boolean-protocol
+yao --arithmetic-protocol beavy
+
 
 Server-1
-./bin/tensor_gt_relu --my-id 1 --party 0,::1,7002 --party 1,::1,7001 --arithmetic-protocol beavy
---boolean-protocol yao --repetitions 1 --fractional-bits 13 --filepath file_config_input1
+./bin/constant_model_neural_network --my-id 1 --party 0,::1,7002 --party 1,::1,7000
+--fractional-bits 13 --layer-id 1 --current-path ${BASE_DIR}/build_debwithrelinfo_gcc
+--config-file-input remote_image_shares --weights-file newW1 --bias-file newB1 --boolean-protocol
+yao --arithmetic-protocol beavy
+
 */
 // MIT License
 //
@@ -35,7 +41,6 @@ Server-1
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <filesystem>
@@ -51,24 +56,44 @@ Server-1
 #include <boost/lexical_cast.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/program_options.hpp>
+#include <parallel/algorithm>
 
-#include "algorithm/circuit_loader.h"
-#include "base/gate_factory.h"
-#include "base/two_party_backend.h"
 #include "communication/communication_layer.h"
 #include "communication/tcp_transport.h"
 #include "compute_server/compute_server.h"
 #include "statistics/analysis.h"
 #include "utility/logger.h"
 
+#include <boost/thread/thread.hpp>
+#include <chrono>
+#include "algorithm/circuit_loader.h"
+#include "base/gate_factory.h"
+#include "base/two_party_backend.h"
 #include "base/two_party_tensor_backend.h"
+#include "communication/message_handler.h"
 #include "protocols/beavy/tensor.h"
 #include "tensor/tensor.h"
 #include "tensor/tensor_op.h"
 #include "tensor/tensor_op_factory.h"
+#include "utility/linear_algebra.h"
 #include "utility/new_fixed_point.h"
 
-void testMemoryOccupied(bool WriteToFiles, int my_id, std::string path) {
+namespace po = boost::program_options;
+
+int j = 0;
+// global variable
+std::vector<std::uint64_t> Delta_otherid;
+std::vector<std::uint64_t> delta_1;
+bool flag1, flag2, flag0 = false;
+bool server1_ready_flag, server0_ready_flag = false;
+
+static std::vector<uint64_t> generate_inputs(const MOTION::tensor::TensorDimensions dims) {
+  return MOTION::Helpers::RandomVector<uint64_t>(dims.get_data_size());
+}
+
+bool is_empty(std::ifstream& file) { return file.peek() == std::ifstream::traits_type::eof(); }
+
+void testMemoryOccupied(int WriteToFiles, int my_id, std::string path) {
   int tSize = 0, resident = 0, share = 0;
   std::ifstream buffer("/proc/self/statm");
   buffer >> tSize >> resident >> share;
@@ -96,7 +121,7 @@ void testMemoryOccupied(bool WriteToFiles, int my_id, std::string path) {
 
     std::ofstream file2;
     file2.open(t2, std::ios_base::app);
-    file2 << "RelU : \n";
+    file2 << "Multiplication layer : \n";
     file2 << "RSS - " << rss << " kB\n";
     file2 << "Shared Memory - " << shared_mem << " kB\n";
     file2 << "Private Memory - " << rss - shared_mem << "kB\n";
@@ -104,10 +129,22 @@ void testMemoryOccupied(bool WriteToFiles, int my_id, std::string path) {
   }
 }
 
-namespace po = boost::program_options;
+//////////////////New functions////////////////////////////////////////
+/// In read_file also include file not there error and file empty alerts
+std::uint64_t read_file(std::ifstream& pro) {
+  std::string str;
+  char num;
+  while (pro >> std::noskipws >> num) {
+    if (num != ' ' && num != '\n') {
+      str.push_back(num);
+    } else {
+      break;
+    }
+  }
 
-static std::vector<uint64_t> generate_inputs(const MOTION::tensor::TensorDimensions dims) {
-  return MOTION::Helpers::RandomVector<uint64_t>(dims.get_data_size());
+  std::string::size_type sz = 0;
+  std::uint64_t ret = (uint64_t)std::stoull(str, &sz, 0);
+  return ret;
 }
 
 struct Matrix {
@@ -123,68 +160,63 @@ struct Options {
   std::size_t num_repetitions;
   std::size_t num_simd;
   bool sync_between_setup_and_online;
-  MOTION::MPCProtocol arithmetic_protocol;
-  MOTION::MPCProtocol boolean_protocol;
-  //////////////////////////changes////////////////////////////
-  Matrix input;
-  std::uint64_t num_elements;
-  std::uint64_t column_size;
-  std::string currentpath;
-  //////////////////////////////////////////////////////////////
   std::size_t fractional_bits;
+  std::string imageprovider;
+  std::string modelpath;
+  std::size_t layer_id;
+  std::string currentpath;
   std::size_t my_id;
-  std::string filepath_frombuild;
   MOTION::Communication::tcp_parties_config tcp_config;
   bool no_run = false;
+  Matrix image_file;
+  Matrix row;
+  Matrix col;
+  std::vector<float> B_data;
+  std::vector<float> W_data;
+  std::uint64_t W_row = 0, W_col = 0;
+  std::uint64_t B_row = 0, B_col = 0;
+  std::string weights_file;
+  std::string bias_file;
+  MOTION::MPCProtocol arithmetic_protocol;
+  MOTION::MPCProtocol boolean_protocol;
 };
 
-bool is_empty(std::ifstream& file) { return file.peek() == std::ifstream::traits_type::eof(); }
-
-//////////////////New functions////////////////////////////////////////
-/// In read_file also include file not there error and file empty alerts
-std::uint64_t read_file(std::ifstream& indata) {
+// this function reads all lines but takes into consideration only the required input
+// if j==count , the program will not make str empty and return it once j>count
+std::string read_filepath(std::ifstream& indata, int count) {
   std::string str;
-  char num;
-  while (indata >> std::noskipws >> num) {
-    if (num != ' ' && num != '\n') {
-      str.push_back(num);
-    } else {
+
+  while (j <= count) {
+    char num;
+    while (indata) {
+      std::getline(indata, str);
+
+      if (j < count) {
+        str = " ";
+      }
+      j++;
       break;
     }
   }
-  std::string::size_type sz = 0;
-  std::uint64_t ret = (uint64_t)std::stoull(str, &sz, 0);
-  return ret;
-}
-
-std::string read_filepath(std::ifstream& indata) {
-  std::string str;
-
-  char num;
-  while (indata) {
-    std::getline(indata, str);
-  }
-  // std::cout << str << std::endl;
   return str;
 }
 
-int input_shares(Options* options, std::string p) {
-  std::ifstream indata1, indata2;
-
+int image_shares(Options* options, std::string p) {
+  std::ifstream temps;
   try {
-    indata1.open(p);
-    if (indata1) {
-      std::cout << "File found\n";
+    temps.open(p);
+    if (temps) {
+      std::cout << "Image shares File found\n";
     } else {
-      std::cout << "File not found\n";
+      std::cout << "Image shares File not found\n";
     }
   } catch (std::ifstream::failure e) {
-    std::cerr << "Error while opening the input share file.\n";
+    std::cerr << "Error while opening the image share file.\n";
     return EXIT_FAILURE;
   }
 
   try {
-    if (is_empty(indata1)) {
+    if (is_empty(temps)) {
       // file is empty
     }
   } catch (std::ifstream::failure e) {
@@ -192,80 +224,169 @@ int input_shares(Options* options, std::string p) {
     return EXIT_FAILURE;
   }
 
-  int num_elements, column_size;
+  std::uint64_t rows, cols;
   try {
-    num_elements = read_file(indata1);
-    column_size = read_file(indata1);
+    rows = read_file(temps);
+    options->image_file.row = rows;
+    std::cout << "Image r " << rows << " ";
+    cols = read_file(temps);
+    options->image_file.col = cols;
+    std::cout << "c " << cols << "\n";
   } catch (std::ifstream::failure e) {
     std::cerr << "Error while reading columns from image shares.\n";
     return EXIT_FAILURE;
   }
 
-  options->num_elements = num_elements;
-  options->column_size = column_size;
-
-  auto k = 0;
-  while (k < options->num_elements * options->column_size * 2) {
-    std::uint64_t num = read_file(indata1);
-    if (indata1.eof()) {
-      std::cerr << "File contains less number of elements" << std::endl;
-      return EXIT_FAILURE;
-    }
-    k++;
-  }
-
-  indata1.close();
-  indata2.open(p);
-
-  options->num_elements = read_file(indata2);
-  options->column_size = read_file(indata2);
-  // std::cout << options->num_elements << " " << options->column_size << "\n";
-  for (int i = 0; i < options->num_elements; ++i) {
+  for (int i = 0; i < rows * cols; ++i) {
     try {
-      uint64_t m1 = read_file(indata2);
-      options->input.Delta.push_back(m1);
-      uint64_t m2 = read_file(indata2);
-      options->input.delta.push_back(m2);
+      uint64_t m1 = read_file(temps);
+      options->image_file.Delta.push_back(m1);
+      uint64_t m2 = read_file(temps);
+      options->image_file.delta.push_back(m2);
+      // std::cout << options->image_file.Delta[i] << " " << options->image_file.delta[i] << "\n";
     } catch (std::ifstream::failure e) {
       std::cerr << "Error while reading columns from image shares.\n";
       return EXIT_FAILURE;
     }
   }
-  indata2.close();
+  temps.close();
+}
+
+int read_W_csv(Options* options, std::string W_path) {
+  std::ifstream file;
+  std::cout << "W: " << W_path << "\n";
+  try {
+    file.open(W_path);
+    if (file) {
+      std::cout << "W_csv File found\n";
+    } else {
+      std::cout << "W_csv File not found\n";
+    }
+  } catch (std::ifstream::failure e) {
+    std::cerr << "Error while opening the weight csv file.\n";
+    return EXIT_FAILURE;
+  }
+
+  try {
+    if (is_empty(file)) {
+      // //file is empty
+    }
+  } catch (std::ifstream::failure e) {
+    std::cerr << "W_csv file is empty.\n";
+    return EXIT_FAILURE;
+  }
+
+  // //read weights
+  std::string line;
+  while (std::getline(file, line)) {
+    std::stringstream lineStream(line);
+    std::string cell;
+
+    while (std::getline(lineStream, cell, ',')) {
+      options->W_data.push_back(stof(cell));
+      //   std::cout << stof(cell) << " ";
+    }
+  }
+  //   std::cout << "\n";
+
+  file.close();
+  file.open(W_path);
+
+  while (std::getline(file, line)) {
+    float temp;
+    std::istringstream iss(line);
+    if (iss >> temp) {
+      options->W_row++;
+    }
+  }
+  int total_size = options->W_data.size();
+  options->W_col = total_size / (options->W_row);
+
+  std::cout << "W rows : " << options->W_row << "\n";
+  std::cout << "W col : " << options->W_col << "\n";
+  file.close();
+}
+
+int read_B_csv(Options* options, std::string B_path) {
+  std::ifstream file;
+  std::cout << "B: " << B_path << "\n";
+  try {
+    file.open(B_path);
+    if (file) {
+      std::cout << "B_csv File found\n";
+    } else {
+      std::cout << "B_csv File not found\n";
+    }
+  } catch (std::ifstream::failure e) {
+    std::cerr << "Error while opening the Bias csv file.\n";
+    return EXIT_FAILURE;
+  }
+
+  try {
+    if (is_empty(file)) {
+      // //file is empty
+    }
+  } catch (std::ifstream::failure e) {
+    std::cerr << "B_csv file is empty.\n";
+    return EXIT_FAILURE;
+  }
+
+  // //read bias
+  std::string line;
+  while (std::getline(file, line)) {
+    std::stringstream lineStream(line);
+    std::string cell;
+
+    while (std::getline(lineStream, cell, ',')) {
+      options->B_data.push_back(stof(cell));
+      std::cout << stof(cell) << " ";
+    }
+  }
+  std::cout << "\n";
+
+  file.close();
+  file.open(B_path);
+
+  while (std::getline(file, line)) {
+    float temp;
+    std::istringstream iss(line);
+    if (iss >> temp) {
+      options->B_row++;
+    }
+  }
+  std::cout << "B rows:" << options->B_row << "\n";
+  options->B_col = 1;
+
+  file.close();
 }
 
 int file_read(Options* options) {
   std::string path = options->currentpath;
-  // std::string path = std::filesystem::current_path();
-  std::string t1 = path + "/" + options->filepath_frombuild;
-
-  std::ifstream file1;
-  try {
-    file1.open(t1);
-    if (file1) {
-      std::cout << "File found\n";
-    } else {
-      std::cout << "File not found\n";
-    }
-  } catch (std::ifstream::failure e) {
-    std::cerr << "Error while opening config_model file.\n";
-    return EXIT_FAILURE;
+  std::string t1, i;
+  // //if layer_id=1 then read filename inside server
+  // //else read file_config_input (id is appended)
+  if (options->layer_id == 1) {
+    t1 = path + "/server" + std::to_string(options->my_id) + "/Image_shares/" +
+         options->imageprovider;
+  } else if (options->layer_id > 1) {
+    // outputshare_0/1 inside server 1/0
+    t1 = path + "/server" + std::to_string(options->my_id) + "/" + options->imageprovider + "_" +
+         std::to_string(options->my_id);
   }
 
-  try {
-    if (is_empty(file1)) {
-      // file is empty
-    }
-  } catch (std::ifstream::failure e) {
-    std::cerr << "config_file_model is empty.\n";
-    return EXIT_FAILURE;
-  }
+  image_shares(options, t1);
 
-  std::string i = read_filepath(file1);
-  std::cout << "i:" << i << "\n";
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////
+  std::string home_dir = getenv("BASE_DIR");
+  std::string model_path = home_dir + "/data/ModelProvider/";
+  std::string W1_path, W2_path, B1_path, B2_path;
+  std::cout << model_path << "\n";
 
-  file1.close();
-  input_shares(options, i);
+  W1_path = model_path + options->weights_file + ".csv";
+  B1_path = model_path + options->bias_file + ".csv";
+
+  read_W_csv(options, W1_path);
+  read_B_csv(options, B1_path);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -275,25 +396,27 @@ std::optional<Options> parse_program_options(int argc, char* argv[]) {
   // clang-format off
   desc.add_options()
     ("help,h", po::bool_switch()->default_value(false),"produce help message")
-    ("config-file", po::value<std::string>(), "config file containing options")
+    ("config-file-input", po::value<std::string>()->required(), "config file containing options")
     ("my-id", po::value<std::size_t>()->required(), "my party id")
+    ("layer-id", po::value<std::size_t>()->required(), "layer id")
     ("party", po::value<std::vector<std::string>>()->multitoken(),
      "(party id, IP, port), e.g., --party 1,127.0.0.1,7777")
     ("threads", po::value<std::size_t>()->default_value(0), "number of threads to use for gate evaluation")
     ("json", po::bool_switch()->default_value(false), "output data in JSON format")
     ("fractional-bits", po::value<std::size_t>()->default_value(16),
      "number of fractional bits for fixed-point arithmetic")
-    ("arithmetic-protocol", po::value<std::string>()->required(), "2PC protocol (GMW or BEAVY)")
-    ("boolean-protocol", po::value<std::string>()->required(), "2PC protocol (Yao, GMW or BEAVY)")
-    ("filepath", po::value<std::string>()->required(), "Path of the shares file from build_debwithrelinfo folder")
     ("repetitions", po::value<std::size_t>()->default_value(1), "number of repetitions")
     ("num-simd", po::value<std::size_t>()->default_value(1), "number of SIMD values")
     ("current-path",po::value<std::string>()->required(), "current path build_debwithrelinfo")
     ("sync-between-setup-and-online", po::bool_switch()->default_value(false),
      "run a synchronization protocol before the online phase starts")
     ("no-run", po::bool_switch()->default_value(false), "just build the circuit, but not execute it")
+    ("weights-file", po::value<std::string>()->required(), "weights csv file")
+    ("bias-file", po::value<std::string>()->required(), "biass csv file")
+    ("arithmetic-protocol", po::value<std::string>()->required(), "2PC protocol (GMW or BEAVY)")
+    ("boolean-protocol", po::value<std::string>()->required(), "2PC protocol (Yao, GMW or BEAVY)")
     ;
-  // clang-format on
+  // //clang-format on
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -321,9 +444,12 @@ std::optional<Options> parse_program_options(int argc, char* argv[]) {
   options.num_simd = vm["num-simd"].as<std::size_t>();
   options.sync_between_setup_and_online = vm["sync-between-setup-and-online"].as<bool>();
   options.no_run = vm["no-run"].as<bool>();
-  //////////////////////////////////////////////////////////////////
-  options.filepath_frombuild = vm["filepath"].as<std::string>();
   options.currentpath = vm["current-path"].as<std::string>();
+  //////////////////////////////////////////////////////////////////
+  options.imageprovider = vm["config-file-input"].as<std::string>();
+  options.layer_id = vm["layer-id"].as<std::size_t>();
+  options.weights_file = vm["weights-file"].as<std::string>();
+  options.bias_file = vm["bias-file"].as<std::string>();
   /////////////////////////////////////////////////////////////////
   options.fractional_bits = vm["fractional-bits"].as<std::size_t>();
   if (options.my_id > 1) {
@@ -331,7 +457,7 @@ std::optional<Options> parse_program_options(int argc, char* argv[]) {
     return std::nullopt;
   }
 
-  auto arithmetic_protocol = vm["arithmetic-protocol"].as<std::string>();
+    auto arithmetic_protocol = vm["arithmetic-protocol"].as<std::string>();
   boost::algorithm::to_lower(arithmetic_protocol);
   if (arithmetic_protocol == "gmw") {
     options.arithmetic_protocol = MOTION::MPCProtocol::ArithmeticGMW;
@@ -353,6 +479,7 @@ std::optional<Options> parse_program_options(int argc, char* argv[]) {
     std::cerr << "invalid protocol: " << boolean_protocol << "\n";
     return std::nullopt;
   }
+
 
   //////////////////////////////////////////////////////////////////
   file_read(&options);
@@ -403,70 +530,73 @@ void print_stats(const Options& options,
                  const MOTION::Statistics::AccumulatedRunTimeStats& run_time_stats,
                  const MOTION::Statistics::AccumulatedCommunicationStats& comm_stats) {
   if (options.json) {
-    auto obj = MOTION::Statistics::to_json("tensor_gt_relu", run_time_stats, comm_stats);
+    auto obj = MOTION::Statistics::to_json("tensor_gt_mul", run_time_stats, comm_stats);
     obj.emplace("party_id", options.my_id);
-    obj.emplace("arithmetic_protocol", MOTION::ToString(options.arithmetic_protocol));
-    obj.emplace("boolean_protocol", MOTION::ToString(options.boolean_protocol));
     obj.emplace("simd", options.num_simd);
     obj.emplace("threads", options.threads);
     obj.emplace("sync_between_setup_and_online", options.sync_between_setup_and_online);
     // std::cout << obj << "\n";
   } else {
-    std::cout << MOTION::Statistics::print_stats("tensor_gt_relu", run_time_stats, comm_stats);
+    std::cout << MOTION::Statistics::print_stats("read_image_shares", run_time_stats, comm_stats);
   }
 }
 
 auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBackend& backend) {
+  std::cout << "Inside create_composite"
+            << "\n";
+
+  auto frac_bits=options.fractional_bits;
   // retrieve the gate factories for the chosen protocols
   auto& arithmetic_tof = backend.get_tensor_op_factory(options.arithmetic_protocol);
   auto& boolean_tof = backend.get_tensor_op_factory(MOTION::MPCProtocol::Yao);
-  auto& boolean_tof2 = backend.get_tensor_op_factory(MOTION::MPCProtocol::BooleanBEAVY);
 
-  MOTION::tensor::TensorDimensions tensor_dims;
-  tensor_dims.batch_size_ = 1;
-  tensor_dims.num_channels_ = 1;
-  tensor_dims.height_ = options.num_elements;
-  tensor_dims.width_ = 1;
-
-  /*const MOTION::tensor::GemmOp gemm_op1 = {
-      .input_A_shape_ = {options.W_file.row, options.W_file.col},
+  const MOTION::tensor::GemmOp gemm_op1 = {
+      .input_A_shape_ = {options.W_row, options.W_col},
       .input_B_shape_ = {options.image_file.row, options.image_file.col},
-      .output_shape_ = {options.W_file.row, options.image_file.col}};
-      */
-  /////////////////////////////////////////////////////////////////////////
-  MOTION::tensor::TensorCP tensor_input;
-  auto pair_input = arithmetic_tof.make_arithmetic_64_tensor_input_shares(tensor_dims);
-  std::vector<ENCRYPTO::ReusableFiberPromise<MOTION::IntegerValues<uint64_t>>> input_vector =
-      std::move(pair_input.first);
-  tensor_input = pair_input.second;
-  assert(tensor_input);
+      .output_shape_ = {options.W_row, options.image_file.col}};
 
+ const auto X_dims = gemm_op1.get_input_B_tensor_dims();
+    //  const auto X_dims = options.image_file.row;
+
+  /////////////////////////////////////////////////////////////////////////
+  
+  MOTION::tensor::TensorCP tensor_X ,cmm_output,add_output;
+
+  auto pairX = arithmetic_tof.make_arithmetic_64_tensor_input_shares(X_dims);
+  std::vector<ENCRYPTO::ReusableFiberPromise<MOTION::IntegerValues<uint64_t>>> input_promises_X =
+      std::move(pairX.first);
+  tensor_X = pairX.second;
+  
   ///////////////////////////////////////////////////////////////
-  input_vector[0].set_value(options.input.Delta);
-  input_vector[1].set_value(options.input.delta);
+  input_promises_X[0].set_value(options.image_file.Delta);
+  input_promises_X[1].set_value(options.image_file.delta);
+
   ///////////////////////////////////////////////////////////////////
 
-  std::function<MOTION::tensor::TensorCP(const MOTION::tensor::TensorCP&)> make_activation;
+  std::vector<std::uint64_t> encoded_W(options.W_data.size(), 0);
+  std::transform(options.W_data.begin(),options.W_data.end(), encoded_W.begin(), [frac_bits](auto j) {
+    return MOTION::new_fixed_point::encode<std::uint64_t, float>(j, frac_bits);
+  });
 
-  make_activation = [&](const auto& input) {
-    const auto negated_tensor = arithmetic_tof.make_tensor_negate(input);
-    const auto boolean_tensor =
-        boolean_tof.make_tensor_conversion(MOTION::MPCProtocol::Yao, negated_tensor);
-    const auto relu_tensor = boolean_tof.make_tensor_relu_op(boolean_tensor);
-    const auto finBoolean_tensor =
-        boolean_tof.make_tensor_conversion(options.arithmetic_protocol, relu_tensor);
-    return arithmetic_tof.make_tensor_negate(finBoolean_tensor);
-  };
+    std::vector<std::uint64_t> encoded_B(options.B_data.size(), 0);
+  std::transform(options.B_data.begin(),options.B_data.end(), encoded_B.begin(), [frac_bits](auto j) {
+    return MOTION::new_fixed_point::encode<std::uint64_t, float>(j, frac_bits);
+  });
+   
 
-  auto relu_output = make_activation(tensor_input);
+     // In this function call, when 'true' or 'false' is set as the fourth argument,
+  // 'true' multiplies tensor * constant, while 'false' does constant * tensor.
+   cmm_output = arithmetic_tof.make_tensor_constMatrix_Mul_op(gemm_op1, encoded_W, tensor_X,false, options.fractional_bits);
+   
+   add_output = arithmetic_tof.make_tensor_constAdd_op(cmm_output,encoded_B);
 
   ENCRYPTO::ReusableFiberFuture<std::vector<std::uint64_t>> output_future, main_output_future,
       main_output;
 
   if (options.my_id == 0) {
-    arithmetic_tof.make_arithmetic_tensor_output_other(relu_output);
+    arithmetic_tof.make_arithmetic_tensor_output_other(add_output);
   } else {
-    main_output_future = arithmetic_tof.make_arithmetic_64_tensor_output_my(relu_output);
+    main_output_future = arithmetic_tof.make_arithmetic_64_tensor_output_my(add_output);
   }
 
   return std::move(main_output_future);
@@ -475,32 +605,32 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
 void run_composite_circuit(const Options& options, MOTION::TwoPartyTensorBackend& backend) {
   auto output_future = create_composite_circuit(options, backend);
   backend.run();
-  // if (options.my_id == 1) {
-  //   auto main = output_future.get();
+  if (options.my_id == 1) {
+    auto interm = output_future.get();
+    std::cout<<"The output is : \n";
 
-  //   for (int i = 0; i < main.size(); ++i) {
-  //     long double temp =
-  //         MOTION::fixed_point::decode<uint64_t, long double>(main[i], options.fractional_bits);
+    for (int i = 0; i < interm.size(); ++i) {
+      long double temp =
+          MOTION::new_fixed_point::decode<uint64_t, long double>(interm[i], options.fractional_bits);
+      //     mod_x.push_back(temp);
+      std::cout << temp << ",";
 
-  //     std::cout << temp << " , ";
-  //   }
-  // }
+    }
+  }
 }
-int main(int argc, char* argv[]) {
-  // testMemoryOccupied();
-  // std::cout << "Inside main";
-  bool WriteToFiles = 1;
+
+int main(int argc, char* argv[]) 
+{
   auto options = parse_program_options(argc, argv);
+  int WriteToFiles = 1;
   if (!options.has_value()) {
     return EXIT_FAILURE;
   }
-
-  try {
-    auto comm_layer = setup_communication(*options);
+   try {
+auto comm_layer = setup_communication(*options);
     auto logger = std::make_shared<MOTION::Logger>(options->my_id,
                                                    boost::log::trivial::severity_level::trace);
     comm_layer->set_logger(logger);
-
     MOTION::Statistics::AccumulatedRunTimeStats run_time_stats;
     MOTION::Statistics::AccumulatedCommunicationStats comm_stats;
     MOTION::TwoPartyTensorBackend backend(*comm_layer, options->threads,
@@ -524,8 +654,8 @@ int main(int argc, char* argv[]) {
       std::ofstream file2;
       file2.open(t2, std::ios_base::app);
       std::string time_str =
-          MOTION::Statistics::print_stats_short("tensor_gt_relu", run_time_stats, comm_stats);
-      // std::cout << "Execution time string:" << time_str << "\n";
+          MOTION::Statistics::print_stats_short("tensor_gt_mul_test", run_time_stats, comm_stats);
+      std::cout << "Execution time string:" << time_str << "\n";
       double exec_time = std::stod(time_str);
       std::cout << "Execution time:" << exec_time << "\n";
       file2 << "Execution time - " << exec_time << "msec\n";
@@ -537,10 +667,9 @@ int main(int argc, char* argv[]) {
       file1 << "\n";
       file1.close();
     }
-  } catch (std::runtime_error& e) {
+   }
+   catch (std::runtime_error& e) {
     std::cerr << "ERROR OCCURRED: " << e.what() << "\n";
-    std::cerr << "ERROR Caught !!"
-              << "\n";
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;

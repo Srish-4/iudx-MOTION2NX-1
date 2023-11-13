@@ -6,12 +6,14 @@ output shares of this will be written. The following instructions run this code.
 
 At the argument "--filepath " give the path of the file containing shares from build_deb.... folder
 Server-0
-./bin/tensor_gt_relu --my-id 0 --party 0,::1,7002 --party 1,::1,7000 --arithmetic-protocol beavy
---boolean-protocol yao --fractional-bits 13 --filepath file_config_input0
+./bin/tensor_argmax --my-id 0 --party 0,::1,7002 --party 1,::1,7000 --arithmetic-protocol beavy
+--boolean-protocol yao --fractional-bits 13 --filepath file_config_input0 --current-path
+${BASE_DIR}/build_debwithrelinfo_gcc
 
 Server-1
-./bin/tensor_gt_relu --my-id 1 --party 0,::1,7002 --party 1,::1,7001 --arithmetic-protocol beavy
+./bin/tensor_argmax --my-id 1 --party 0,::1,7002 --party 1,::1,7001 --arithmetic-protocol beavy
 --boolean-protocol yao --repetitions 1 --fractional-bits 13 --filepath file_config_input1
+--current-path ${BASE_DIR}/build_debwithrelinfo_gcc
 */
 // MIT License
 //
@@ -35,12 +37,14 @@ Server-1
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <bits/stdc++.h>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <numeric>
 #include <random>
 #include <regex>
 #include <stdexcept>
@@ -127,6 +131,7 @@ struct Options {
   MOTION::MPCProtocol boolean_protocol;
   //////////////////////////changes////////////////////////////
   Matrix input;
+  Matrix index;
   std::uint64_t num_elements;
   std::uint64_t column_size;
   std::string currentpath;
@@ -155,17 +160,6 @@ std::uint64_t read_file(std::ifstream& indata) {
   std::string::size_type sz = 0;
   std::uint64_t ret = (uint64_t)std::stoull(str, &sz, 0);
   return ret;
-}
-
-std::string read_filepath(std::ifstream& indata) {
-  std::string str;
-
-  char num;
-  while (indata) {
-    std::getline(indata, str);
-  }
-  // std::cout << str << std::endl;
-  return str;
 }
 
 int input_shares(Options* options, std::string p) {
@@ -240,6 +234,8 @@ int file_read(Options* options) {
   std::string t1 = path + "/" + options->filepath_frombuild;
 
   std::ifstream file1;
+
+  std::cout << t1 << "\n";
   try {
     file1.open(t1);
     if (file1) {
@@ -254,18 +250,26 @@ int file_read(Options* options) {
 
   try {
     if (is_empty(file1)) {
-      // file is empty
+      std::cout << "File is empty\n";
     }
   } catch (std::ifstream::failure e) {
     std::cerr << "config_file_model is empty.\n";
     return EXIT_FAILURE;
   }
 
-  std::string i = read_filepath(file1);
-  std::cout << "i:" << i << "\n";
+  std::string str;
+  char t;
+  while (file1 >> std::noskipws >> t) {
+    if (t != ' ' && t != '\n') {
+      str.push_back(t);
+    } else {
+      break;
+    }
+  }
+  std::cout << str << "\n";
 
+  input_shares(options, str);
   file1.close();
-  input_shares(options, i);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -419,8 +423,23 @@ void print_stats(const Options& options,
 auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBackend& backend) {
   // retrieve the gate factories for the chosen protocols
   auto& arithmetic_tof = backend.get_tensor_op_factory(options.arithmetic_protocol);
-  auto& boolean_tof = backend.get_tensor_op_factory(MOTION::MPCProtocol::Yao);
-  auto& boolean_tof2 = backend.get_tensor_op_factory(MOTION::MPCProtocol::BooleanBEAVY);
+  auto& yao_tof = backend.get_tensor_op_factory(options.boolean_protocol);
+  auto& boolean_tof = backend.get_tensor_op_factory(MOTION::MPCProtocol::BooleanBEAVY);
+
+  auto frac_bits = options.fractional_bits;
+  std::vector<float> arr = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+  std::vector<uint64_t> indx_vec;
+
+  for (int i = 0; i < arr.size(); i++) {
+    auto temp = MOTION::new_fixed_point::encode<uint64_t, float>(arr[i], frac_bits);
+    indx_vec.push_back(temp);
+  }
+
+  std::cout << "The indexes are :\n";
+  for (int i = 0; i < indx_vec.size(); i++) {
+    std::cout << indx_vec[i] << " ";
+  }
+  std::cout << "\n";
 
   MOTION::tensor::TensorDimensions tensor_dims;
   tensor_dims.batch_size_ = 1;
@@ -428,11 +447,31 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
   tensor_dims.height_ = options.num_elements;
   tensor_dims.width_ = 1;
 
-  /*const MOTION::tensor::GemmOp gemm_op1 = {
-      .input_A_shape_ = {options.W_file.row, options.W_file.col},
-      .input_B_shape_ = {options.image_file.row, options.image_file.col},
-      .output_shape_ = {options.W_file.row, options.image_file.col}};
-      */
+  const MOTION::tensor::MaxPoolOp maxpool_op = {.input_shape_ = {1, options.num_elements, 1},
+                                                .output_shape_ = {1, 1, 1},
+                                                .kernel_shape_ = {options.num_elements, 1},
+                                                .strides_ = {1, 1}};
+
+  const MOTION::tensor::GemmOp gemm_op1 = {.input_A_shape_ = {options.num_elements, 1},
+                                           .input_B_shape_ = {1, 1},
+                                           .output_shape_ = {options.num_elements, 1}};
+
+  const MOTION::tensor::GemmOp gemm_op2 = {.input_A_shape_ = {1, options.num_elements},
+                                           .input_B_shape_ = {options.num_elements, 1},
+                                           .output_shape_ = {1, 1}};
+
+  std ::vector<float> constant;
+  constant.assign(10, 1);
+  std ::vector<uint64_t> constant_encoded(10, 0);
+
+  std::transform(
+      std::begin(constant), std::end(constant), std::begin(constant_encoded),
+      [frac_bits](auto j) { return MOTION::new_fixed_point::encode<std::uint64_t, float>(j, 13); });
+
+  const auto input_A_dims = maxpool_op.get_input_tensor_dims();
+  const auto input_B_dims = maxpool_op.get_input_tensor_dims();
+  const auto output_dims = maxpool_op.get_output_tensor_dims();
+
   /////////////////////////////////////////////////////////////////////////
   MOTION::tensor::TensorCP tensor_input;
   auto pair_input = arithmetic_tof.make_arithmetic_64_tensor_input_shares(tensor_dims);
@@ -446,27 +485,98 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
   input_vector[1].set_value(options.input.delta);
   ///////////////////////////////////////////////////////////////////
 
-  std::function<MOTION::tensor::TensorCP(const MOTION::tensor::TensorCP&)> make_activation;
+  std::function<MOTION::tensor::TensorCP(const MOTION::tensor::TensorCP&)> make_maxPool;
+  make_maxPool = [&](const auto& input) {
+    const auto yao_tensor = yao_tof.make_tensor_conversion(MOTION::MPCProtocol::Yao, input);
+    const auto maxPool_tensor = yao_tof.make_tensor_maxpool_op(maxpool_op, yao_tensor);
+    return yao_tof.make_tensor_conversion(options.arithmetic_protocol, maxPool_tensor);
+  };
 
+  std::function<MOTION::tensor::TensorCP(const MOTION::tensor::TensorCP&)> make_activation,
+      make_relu;
+  std::function<MOTION::tensor::TensorCP(const MOTION::tensor::TensorCP&, std::size_t)>
+      make_indicator;
+  // -RELU(-X)u
   make_activation = [&](const auto& input) {
+    //  const auto negated_tensor = arithmetic_tof.make_tensor_negate(input);
+    const auto boolean_tensor = yao_tof.make_tensor_conversion(MOTION::MPCProtocol::Yao, input);
+    const auto relu_tensor = yao_tof.make_tensor_relu_op(boolean_tensor);
+    return yao_tof.make_tensor_conversion(options.arithmetic_protocol, relu_tensor);
+  };
+  //  RELU(X)
+  make_relu = [&](const auto& input) {
     const auto negated_tensor = arithmetic_tof.make_tensor_negate(input);
     const auto boolean_tensor =
-        boolean_tof.make_tensor_conversion(MOTION::MPCProtocol::Yao, negated_tensor);
-    const auto relu_tensor = boolean_tof.make_tensor_relu_op(boolean_tensor);
+        yao_tof.make_tensor_conversion(MOTION::MPCProtocol::Yao, negated_tensor);
+    const auto relu_tensor = yao_tof.make_tensor_relu_op(boolean_tensor);  // -RELU(-X)
     const auto finBoolean_tensor =
-        boolean_tof.make_tensor_conversion(options.arithmetic_protocol, relu_tensor);
+        yao_tof.make_tensor_conversion(options.arithmetic_protocol, relu_tensor);
     return arithmetic_tof.make_tensor_negate(finBoolean_tensor);
   };
 
-  auto relu_output = make_activation(tensor_input);
+  make_indicator = [&](const auto& input, std::size_t input_size) {
+    const auto first_relu_output = make_activation(input);  // Returns -RELU(-X)
 
-  ENCRYPTO::ReusableFiberFuture<std::vector<std::uint64_t>> output_future, main_output_future,
-      main_output;
+    // Declaring a constant uint64 vector of same size as input and initializing every element
+    // with encoded 9000
+    std::vector<uint64_t> const_vector(
+        input_size, MOTION::new_fixed_point::encode<uint64_t, float>(9000, frac_bits));
+
+    // Multiplying the tensor with the constant vector (element wise)
+    const auto mult_output =
+        arithmetic_tof.make_tensor_constMul_op(first_relu_output, const_vector, frac_bits);
+    // Reached 9000 * -RELU(-X)
+    // Adding an encoded one to the tensor
+    std::vector<uint64_t> const_vector2(input_size,
+                                        MOTION::new_fixed_point::encode<uint64_t, float>(1, 13));
+
+    const auto add_output = arithmetic_tof.make_tensor_constAdd_op(mult_output, const_vector2);
+    // Reached 1 + 9000 * -RELU(-X)
+
+    return make_relu(add_output);  // make_relu returns RELU(Y)
+    // Returning RELU( 1 + 9000 * -RELU(-X) )
+  };
+
+  /////////////////////////////////////////////////////////////////////
+
+  // Uisng indicator funtion to get value 1 at the postion of the maximum element
+  // index_array = [1 2 3 4]
+  // input_vetor-max_vector
+  // eg. input = [4 -2 4 3]
+  // output1 = 4 //max elemnt
+  // output2 = [4 4 4 4]
+  //  we negate output2 and add it to the input
+  // output3 = [1 -2 4 3]- [4 4 4 4] = [0 -6 0 -1]
+  //  we give this as an put to indicator function and gives output4 = [1 0 1 0]
+  //  we do hadamard prodoctconstanta matrix  indx_array with output5 = [1 0 3 0]
+  // maxpool on output 5 gives argmax as 3
+
+  /////////////////////////////////////////////////////////////////////////
+
+  // finding the maximum elemnet m
+  auto output1 = make_maxPool(tensor_input);
+
+  // In this function call, when 'true' or 'false' is set as the fourth argument,
+  // 'true' multiplies tensor * constant, while 'false' does constant * tensor.
+  auto output2 = arithmetic_tof.make_tensor_constMatrix_Mul_op(gemm_op1, constant_encoded, output1,
+                                                               false, frac_bits);
+
+  auto negated_tensor = arithmetic_tof.make_tensor_negate(output2);
+
+  auto output3 = arithmetic_tof.make_tensor_add_op(tensor_input, negated_tensor);
+
+  auto output4 = make_indicator(output3, options.num_elements);
+
+  auto output5 = arithmetic_tof.make_tensor_constMul_op(output4, indx_vec, options.fractional_bits);
+
+  auto output6 = make_maxPool(output5);
+
+  ENCRYPTO::ReusableFiberFuture<std::vector<std::uint64_t>> main_output_future;
 
   if (options.my_id == 0) {
-    arithmetic_tof.make_arithmetic_tensor_output_other(relu_output);
+    arithmetic_tof.make_arithmetic_tensor_output_other(output6);
   } else {
-    main_output_future = arithmetic_tof.make_arithmetic_64_tensor_output_my(relu_output);
+    main_output_future = arithmetic_tof.make_arithmetic_64_tensor_output_my(output6);
   }
 
   return std::move(main_output_future);
@@ -475,16 +585,16 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
 void run_composite_circuit(const Options& options, MOTION::TwoPartyTensorBackend& backend) {
   auto output_future = create_composite_circuit(options, backend);
   backend.run();
-  // if (options.my_id == 1) {
-  //   auto main = output_future.get();
+  if (options.my_id == 1) {
+    auto main = output_future.get();
 
-  //   for (int i = 0; i < main.size(); ++i) {
-  //     long double temp =
-  //         MOTION::fixed_point::decode<uint64_t, long double>(main[i], options.fractional_bits);
+    for (int i = 0; i < main.size(); ++i) {
+      long double temp =
+          MOTION::new_fixed_point::decode<uint64_t, long double>(main[i], options.fractional_bits);
 
-  //     std::cout << temp << " , ";
-  //   }
-  // }
+      std::cout << "The index is :" << temp << "\n";
+    }
+  }
 }
 int main(int argc, char* argv[]) {
   // testMemoryOccupied();

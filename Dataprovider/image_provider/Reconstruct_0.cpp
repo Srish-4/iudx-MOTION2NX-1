@@ -1,4 +1,3 @@
-#include <bits/stdc++.h>
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
@@ -21,11 +20,10 @@ using std::string;
 namespace po = boost::program_options;
 namespace fs = std::filesystem;
 struct Shares {
-  std::uint64_t Delta, delta;
+  bool Delta, delta;
 };
 struct Options {
   std::string currentpath;
-  std::size_t fractional_bits;
 };
 
 std::optional<Options> parse_program_options(int argc, char* argv[]) {
@@ -35,7 +33,7 @@ std::optional<Options> parse_program_options(int argc, char* argv[]) {
     desc.add_options()
     ("help,h", po::bool_switch()->default_value(false),"produce help message")
      ("current-path",po::value<std::string>()->required(), "current path build_debwithrelinfo")
-    ("fractional-bits", po::value<std::size_t>()->default_value(13)) 
+     
     ;
   // clang-format on
 
@@ -48,7 +46,6 @@ std::optional<Options> parse_program_options(int argc, char* argv[]) {
   }
 
   options.currentpath = vm["current-path"].as<std::string>();
-  options.fractional_bits = vm["fractional-bits"].as<std::size_t>();
 
   return options;
 }
@@ -62,7 +59,6 @@ int main(int argc, char* argv[]) {
     std::string t2 = path + "/server1_shares_X";
 
     std::ifstream file1, file2;
-    float y;
 
     try {
       file1.open(t1);
@@ -74,13 +70,12 @@ int main(int argc, char* argv[]) {
       std::cerr << "Error while opening the input files.\n";
       return EXIT_FAILURE;
     }
-    Shares shares_data_0[1], shares_data_1[1];
-    std::uint64_t temp;
+    Shares shares_data_0[10], shares_data_1[10];
     // get input data
     // std::vector<float> data1
 
     std::vector<bool> final_answer;
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 10; i++) {
       file1 >> shares_data_0[i].Delta;
       file1 >> shares_data_0[i].delta;
       file2 >> shares_data_1[i].Delta;
@@ -92,17 +87,16 @@ int main(int argc, char* argv[]) {
         std::cerr << "Incorrect output shares.\n";
         return EXIT_FAILURE;
       }
-      temp = shares_data_0[i].Delta - shares_data_0[i].delta - shares_data_1[i].delta;
-      y = temp / (pow(2, options->fractional_bits));
+      bool temp = shares_data_0[i].Delta ^ shares_data_0[i].delta ^ shares_data_1[i].delta;
       // std::cout << temp <<" ";
-      // final_answer.push_back(temp);
+      final_answer.push_back(temp);
     }
-    // int i = 0;
-    // while (final_answer[i] != 0) {
-    //   i++;
-    // }
+    int i = 0;
+    while (final_answer[i] != 0) {
+      i++;
+    }
     std::cout << "\nThe image shared is detected as"
-              << ":" << y << "\n";
+              << ":" << i << "\n";
   } catch (std::runtime_error& e) {
     std::cerr << "ERROR OCCURRED: " << e.what() << "\n";
     std::cerr << "ERROR Caught !!"
