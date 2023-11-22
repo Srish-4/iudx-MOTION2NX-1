@@ -34,6 +34,15 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
 
+/*
+./bin/output_shares_receiver --my-id 0 --listening-port 4007 --current-path
+${BASE_DIR}/data/ImageProvider/Final_Output_Shares
+
+./bin/output_shares_receiver --my-id 1 --listening-port 4008 --current-path
+${BASE_DIR}/data/ImageProvider/Final_Output_Shares
+
+*/
+
 using namespace boost::asio;
 using ip::tcp;
 namespace po = boost::program_options;

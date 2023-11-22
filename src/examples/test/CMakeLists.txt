@@ -5,6 +5,7 @@ add_executable(Shares_input Shares_input.cpp)
 add_executable(hamm hamm.cpp)
 add_executable(constMatMul constMatMul.cpp)
 add_executable(sigmoid sigmoid.cpp)
+add_executable(test_argmax_tensor test_argmax_tensor.cpp)
 
 find_package(Boost COMPONENTS json log program_options REQUIRED)
 
@@ -21,6 +22,9 @@ target_compile_features(hamm PRIVATE cxx_std_20)
 target_compile_features(constMatMul PRIVATE cxx_std_20)
 
 target_compile_features(sigmoid PRIVATE cxx_std_20)
+
+target_compile_features(test_argmax_tensor PRIVATE cxx_std_20)
+
 
 target_link_libraries(constAdd
     MOTION::motion
@@ -65,6 +69,13 @@ target_link_libraries(constMatMul
 )
 
 target_link_libraries(sigmoid
+     MOTION::motion
+    Boost::json
+    Boost::log
+    Boost::program_options
+)
+
+target_link_libraries(test_argmax_tensor
      MOTION::motion
     Boost::json
     Boost::log

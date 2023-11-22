@@ -6,7 +6,7 @@ output shares of this will be written. The following instructions run this code.
 
 At the argument "--filepath " give the path of the file containing shares from build_deb.... folder
 Server-0
-./bin/tensor_argmax --my-id 0 --party 0,::1,7002 --party 1,::1,7000 --arithmetic-protocol beavy
+./bin/tensor_argmax --my-id 0 --party 0,::1,7002 --party 1,::1,7001 --arithmetic-protocol beavy
 --boolean-protocol yao --fractional-bits 13 --filepath file_config_input0 --current-path
 ${BASE_DIR}/build_debwithrelinfo_gcc
 
@@ -428,6 +428,8 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
 
   auto frac_bits = options.fractional_bits;
   std::vector<float> arr = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+  // std::vector<float> arr(700);
+  // std::iota(arr.begin(), arr.end(), 1);
   std::vector<uint64_t> indx_vec;
 
   for (int i = 0; i < arr.size(); i++) {

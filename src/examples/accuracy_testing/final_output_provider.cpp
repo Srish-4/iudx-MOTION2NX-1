@@ -38,6 +38,16 @@
 
 #include "utility/logger.h"
 
+/*
+
+./bin/final_output_provider --my-id 0 --connection-port 4007 --config-input remote_image_shares
+--current-path ${BASE_DIR}/build_debwithrelinfo_gcc
+
+./bin/final_output_provider --my-id 1 --connection-port 4008 --config-input remote_image_shares
+--current-path ${BASE_DIR}/build_debwithrelinfo_gcc
+
+*/
+
 #define MAX_CONNECT_RETRIES 50
 // #include "communication/communication_layer.h"
 // #include "communication/tcp_transport.h"

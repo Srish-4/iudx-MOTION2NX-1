@@ -489,7 +489,7 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
 std:: cout << "\n 494: calling make_tensor_constMatrix_Mul_op \n";
   //  gemm_output1 =
   //      arithmetic_tof.make_tensor_gemm_op(gemm_op1, tensor_W1, tensor_X, options.fractional_bits);
-  cmm_output1 = arithmetic_tof.make_tensor_constMatrix_Mul_op(gemm_op1,  W_encoded, tensor_X, options.fractional_bits);
+  cmm_output1 = arithmetic_tof.make_tensor_constMatrix_Mul_op(gemm_op1,  W_encoded, tensor_X, false,options.fractional_bits);
   ENCRYPTO::ReusableFiberFuture<std::vector<std::uint64_t>> output_future, main_output_future,
       main_output;
 

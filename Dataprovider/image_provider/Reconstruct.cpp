@@ -13,6 +13,10 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
 
+/*
+./bin/Reconstruct --current-path ${BASE_DIR}/data/ImageProvider/Final_Output_Shares
+*/
+
 using namespace boost::asio;
 using ip::tcp;
 using std::cout;
