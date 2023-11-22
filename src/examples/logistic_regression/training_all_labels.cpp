@@ -1,3 +1,4 @@
+
 /*
 inputpath changed to imageprovider
 imageprovider is file name inside server 0 and server 1 respectively
@@ -944,6 +945,9 @@ void run_composite_circuit(const Options& options, MOTION::TwoPartyTensorBackend
         k = z * 784 - 1;
       }
     }
+    
+    std::cout << main1.size() << std::endl;
+    std::cout << main2.size() << std::endl;
 
     std::cout << main2.size() << std::endl;
     */
