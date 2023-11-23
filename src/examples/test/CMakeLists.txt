@@ -9,6 +9,7 @@ add_executable(test_argmax_tensor test_argmax_tensor.cpp)
 add_executable(sigmoid5 sigmoid5.cpp)
 add_executable(sigmoidN sigmoidN.cpp)
 add_executable(argmax_test argmax.cpp)
+add_executable(share_generation share_generation.cpp)
 
 find_package(Boost COMPONENTS json log program_options REQUIRED)
 
@@ -33,6 +34,7 @@ target_compile_features(sigmoidN PRIVATE cxx_std_20)
 
 target_compile_features(argmax_test PRIVATE cxx_std_20)
 
+target_compile_features(share_generation PRIVATE cxx_std_20)
 
 
 target_link_libraries(constAdd
@@ -85,6 +87,12 @@ target_link_libraries(sigmoid
 )
 
 target_link_libraries(test_argmax_tensor
+     MOTION::motion
+    Boost::json
+    Boost::log
+    Boost::program_options
+    )
+
 target_link_libraries(sigmoid5
      MOTION::motion
     Boost::json
@@ -100,6 +108,13 @@ target_link_libraries(sigmoidN
 )
 
 target_link_libraries(argmax_test
+     MOTION::motion
+    Boost::json
+    Boost::log
+    Boost::program_options
+)
+
+target_link_libraries(share_generation
      MOTION::motion
     Boost::json
     Boost::log

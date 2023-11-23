@@ -7,11 +7,11 @@ output shares of this will be written. The following instructions run this code.
 At the argument "--filepath " give the path of the file containing shares from build_deb.... folder
 Server-0
 ./bin/sigmoid --my-id 0 --party 0,::1,7002 --party 1,::1,7000 --arithmetic-protocol beavy
---boolean-protocol yao --fractional-bits 13 --file-input input0
+--boolean-protocol yao --fractional-bits 13 --file-input outputshare_0
 
 Server-1
 ./bin/sigmoid --my-id 1 --party 0,::1,7002 --party 1,::1,7000 --arithmetic-protocol beavy
---boolean-protocol yao --fractional-bits 13  --file-input input1
+--boolean-protocol yao --fractional-bits 13  --file-input outputshare_1
 
 */
 // MIT License
@@ -97,7 +97,6 @@ struct Options {
   std::size_t fractional_bits;
   std::string inputpath;
 
-
   std::size_t my_id;
   // std::string filepath_frombuild;
   MOTION::Communication::tcp_parties_config tcp_config;
@@ -142,7 +141,7 @@ void read_input(Options* options, std::string p) {
   std::uint64_t cols = read_file(temps);
   options->input.col = cols;
   std::cout << "c " << cols << "\n";
-  
+
   for (int i = 0; i < rows * cols; ++i) {
     uint64_t m1 = read_file(temps);
     options->input.Delta.push_back(m1);
@@ -154,7 +153,8 @@ void read_input(Options* options, std::string p) {
 
 void file_read(Options* options) {
   std::string path = std::filesystem::current_path();
-  std::string t1 = path + "/" + options->inputpath;
+  std::string t1 = path + "/server" + std::to_string(options->my_id) + "/" + options->inputpath;
+  // std::string t1 = path + "/" + options->inputpath;
   read_input(options, t1);
 }
 
@@ -311,10 +311,9 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
   std::cout << options.input.row << " " << options.input.col << "\n";
 
   MOTION::tensor::TensorDimensions X_dims = {.batch_size_ = 1,
-  .num_channels_ = 1,
-  .height_ = options.input.row,
-  .width_ = options.input.col  
-  };
+                                             .num_channels_ = 1,
+                                             .height_ = options.input.row,
+                                             .width_ = options.input.col};
 
   MOTION::tensor::TensorCP tensor_X;
 
@@ -326,14 +325,15 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
   input_promises_X[0].set_value(options.input.Delta);
   input_promises_X[1].set_value(options.input.delta);
 
-  std::function<MOTION::tensor::TensorCP(const MOTION::tensor::TensorCP&)> make_activation,make_relu;
-  std::function<MOTION::tensor::TensorCP(const MOTION::tensor::TensorCP&, std::size_t)>make_sigmoid;
-  
+  std::function<MOTION::tensor::TensorCP(const MOTION::tensor::TensorCP&)> make_activation,
+      make_relu;
+  std::function<MOTION::tensor::TensorCP(const MOTION::tensor::TensorCP&, std::size_t)>
+      make_sigmoid;
+
   // -RELU(-X)
   make_activation = [&](const auto& input) {
-  //  const auto negated_tensor = arithmetic_tof.make_tensor_negate(input);
-    const auto boolean_tensor =
-        boolean_tof.make_tensor_conversion(MOTION::MPCProtocol::Yao, input);
+    //  const auto negated_tensor = arithmetic_tof.make_tensor_negate(input);
+    const auto boolean_tensor = boolean_tof.make_tensor_conversion(MOTION::MPCProtocol::Yao, input);
     const auto relu_tensor = boolean_tof.make_tensor_relu_op(boolean_tensor);
     return boolean_tof.make_tensor_conversion(options.arithmetic_protocol, relu_tensor);
   };
@@ -343,27 +343,29 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
     const auto negated_tensor = arithmetic_tof.make_tensor_negate(input);
     const auto boolean_tensor =
         boolean_tof.make_tensor_conversion(MOTION::MPCProtocol::Yao, negated_tensor);
-    const auto relu_tensor = boolean_tof.make_tensor_relu_op(boolean_tensor); // -RELU(-X)
+    const auto relu_tensor = boolean_tof.make_tensor_relu_op(boolean_tensor);  // -RELU(-X)
     const auto finBoolean_tensor =
         boolean_tof.make_tensor_conversion(options.arithmetic_protocol, relu_tensor);
     return arithmetic_tof.make_tensor_negate(finBoolean_tensor);
   };
 
   make_sigmoid = [&](const auto& input, std::size_t input_size) {
-    const std::vector<uint64_t>constant_vector1(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(-0.5, options.fractional_bits));
-    const auto input_const_add = arithmetic_tof.make_tensor_constAdd_op(
-        input, constant_vector1);
+    const std::vector<uint64_t> constant_vector1(
+        input_size,
+        MOTION::new_fixed_point::encode<uint64_t, float>(-0.5, options.fractional_bits));
+    const auto input_const_add = arithmetic_tof.make_tensor_constAdd_op(input, constant_vector1);
     const auto first_relu_output = make_activation(input_const_add);
-    const std::vector<uint64_t>constant_vector2(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(1, options.fractional_bits));
-    const auto input_const_add2 = arithmetic_tof.make_tensor_constAdd_op(
-        first_relu_output, constant_vector2);
+    const std::vector<uint64_t> constant_vector2(
+        input_size, MOTION::new_fixed_point::encode<uint64_t, float>(1, options.fractional_bits));
+    const auto input_const_add2 =
+        arithmetic_tof.make_tensor_constAdd_op(first_relu_output, constant_vector2);
     const auto negated_tensor = arithmetic_tof.make_tensor_negate(input_const_add2);
     const auto final_relu_output = make_activation(negated_tensor);
     return arithmetic_tof.make_tensor_negate(final_relu_output);
   };
-  
+
   MOTION::tensor::TensorCP tensor_sigmoid = make_sigmoid(tensor_X, X_dims.get_data_size());
-  
+
   ENCRYPTO::ReusableFiberFuture<std::vector<std::uint64_t>> output_future, main_output_future,
       main_output;
 
