@@ -309,7 +309,9 @@ check_exit_statuses $?
 echo "Layer $layer_id: Matrix multiplication and addition is done"
 
 ####################################### Argmax  ###########################################################################
-$build_path/bin/argmax --my-id 0 --threads 1 --party 0,$cs0_host,$cs0_port_inference --party 1,$cs1_host,$cs1_port_inference --arithmetic-protocol beavy --boolean-protocol beavy --config-filename file_config_input0 --config-input $image_share --current-path $build_path > $debug_0/argmax0_layer${layer_id}.txt &
+#$build_path/bin/argmax --my-id 0 --threads 1 --party 0,$cs0_host,$cs0_port_inference --party 1,$cs1_host,$cs1_port_inference --arithmetic-protocol beavy --boolean-protocol beavy --config-filename file_config_input0 --config-input $image_share --current-path $build_path > $debug_0/argmax0_layer${layer_id}.txt &
+$build_path/bin/tensor_argmax --my-id 0 --party 0,$cs0_host,$cs0_port_inference --party 1,$cs1_host,$cs1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --filepath file_config_input0 --current-path $build_path > $debug_0/argmax0_layer2.txt &
+
 pid1=$!
 wait $pid1
 check_exit_statuses $?
@@ -331,7 +333,9 @@ echo "Output shares of server 1 received by the Image provider"
 
 ############################            Reconstruction       ##################################################################################
 echo "Reconstruction Starts"
-$build_path/bin/Reconstruct --current-path $image_provider_path 
+#$build_path/bin/Reconstruct --current-path $image_provider_path 
+$build_path/bin/Reconstruct --current-path $output_shares_path --fractional-bits $fractional_bits
+
 wait 
 
 
