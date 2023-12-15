@@ -201,7 +201,7 @@ int main(int argc, char* argv[]) {
     std::cerr << "Error while parsing the given input options.\n";
     return EXIT_FAILURE;
   }
-  int channels = 1, rows = 28, columns = 28;  // hardcoded
+  int channels = 3, rows = 32, columns = 32;  // hardcoded
   int num_elements = channels * rows * columns;
   Shares cs0_data[num_elements];
   Shares cs1_data[num_elements];
@@ -278,7 +278,8 @@ int main(int argc, char* argv[]) {
     std::cout << "Received response: " << data << std::endl;
     //-----------------------------Send rows and columns to compute
     // server-------------------------------------------------
-    std::cout << "Image size: Channels=" << channels << " Rows=" << rows << " Columns=" << columns << std::endl;
+    std::cout << "Image size: Channels=" << channels << " Rows=" << rows << " Columns=" << columns
+              << std::endl;
     int arr[3] = {channels, rows, columns};
     boost::asio::write(socket, boost::asio::buffer(&arr, sizeof(arr)), send_error);
     if (send_error) {
