@@ -334,7 +334,7 @@ echo "Output shares of server 1 received by the Image provider"
 ############################            Reconstruction       ##################################################################################
 echo "Reconstruction Starts"
 #$build_path/bin/Reconstruct --current-path $image_provider_path 
-$build_path/bin/Reconstruct --current-path $output_shares_path --fractional-bits $fractional_bits
+$build_path/bin/Reconstruct --current-path $image_provider_path --fractional-bits $fractional_bits
 
 wait 
 
