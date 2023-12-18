@@ -7,14 +7,14 @@ from bash file we are giving ip1 and in this file it is appended to ip1_0 and ip
 
 At the argument "--filepath " give the path of the file containing shares from build_deb.... folder
 Server-0
-./bin/lg10_training --my-id 0 --party 0,::1,7000 --party 1,::1,7001 --arithmetic-protocol
+./bin/training_neuralnet_smpc --my-id 0 --party 0,::1,7000 --party 1,::1,7001 --arithmetic-protocol
 beavy --boolean-protocol yao --fractional-bits 13 --config-file-input Sample_shares
 --config-file-model file_config_model0 --actual-labels Actual_all_labels --current-path
 ${BASE_DIR}/build_debwithrelinfo_gcc --sample-size 3 --w1t-filename SharesForW1T0 --w2t-filename
 SharesForW2T0  --b1-filename SharesForB1_0 --b2-filename SharesForB2_0
 
 Server-1
-./bin/lg10_training --my-id 1 --party 0,::1,7000 --party 1,::1,7001 --arithmetic-protocol
+./bin/training_neuralnet_smpc --my-id 1 --party 0,::1,7000 --party 1,::1,7001 --arithmetic-protocol
 beavy --boolean-protocol yao --fractional-bits 13 --config-file-input Sample_shares
 --config-file-model file_config_model1 --actual-labels Actual_all_labels --current-path
 ${BASE_DIR}/build_debwithrelinfo_gcc --sample-size 3 --w1t-filename SharesForW1T1 --w2t-filename
@@ -210,7 +210,7 @@ struct Options {
   MOTION::Communication::tcp_parties_config tcp_config;
   bool no_run = false;
   int sample_size;
-  Matrix image_file[3], actual_labels;
+  Matrix image_file[10], actual_labels;
   Matrix X, Xtranspose;
   Matrix W1T;  // theta
   Matrix W2T;
@@ -290,10 +290,10 @@ std::optional<Options> parse_program_options(int argc, char* argv[]) {
   options.B2_filename = vm["b2-filename"].as<std::string>();
   ///////////////////////////////////////////////////////////////////
   std::string path = options.currentpath;
-  Matrix_input Xi[3], Yi, Theta1_n, Theta2_n, Bias1, Bias2;
+  Matrix_input Xi[10], Yi, Theta1_n, Theta2_n, Bias1, Bias2;
   for (int i = 0; i < options.sample_size; i++) {
     auto t1 = path + "/server" + std::to_string(options.my_id) + "/Image_shares/" +
-              options.imageprovider + std::to_string(i);
+              options.imageprovider + std::to_string(i + 1);
     std::cout << "Path from where image files are read:" << t1 << "\n";
     Xi[i].Set_data(t1);
     ////////////////////////////////////////////////////////////////
@@ -828,7 +828,7 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
                                                           tensor_X, options.fractional_bits);
   std::cout << "Gemm op 5/tensor_dLdW1T" << std::endl;
 
-  float alpham = 1;
+  float alpham = 0.0005;
   auto encoded_alpham =
       MOTION::new_fixed_point::encode<uint64_t, float>(alpham, options.fractional_bits);
   std::cout << "Encoded alpha m:" << encoded_alpham << "\n";
@@ -870,15 +870,15 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
       main_output_future2, main_output;
 
   if (options.my_id == 0) {
-    arithmetic_tof.make_arithmetic_tensor_output_other(Updated_B1);
+    arithmetic_tof.make_arithmetic_tensor_output_other(Updated_W1T);
   } else {
-    main_output_future1 = arithmetic_tof.make_arithmetic_64_tensor_output_my(Updated_B1);
+    main_output_future1 = arithmetic_tof.make_arithmetic_64_tensor_output_my(Updated_W1T);
   }
 
   if (options.my_id == 0) {
-    arithmetic_tof.make_arithmetic_tensor_output_other(Updated_B2);
+    arithmetic_tof.make_arithmetic_tensor_output_other(Updated_W2T);
   } else {
-    main_output_future2 = arithmetic_tof.make_arithmetic_64_tensor_output_my(Updated_B2);
+    main_output_future2 = arithmetic_tof.make_arithmetic_64_tensor_output_my(Updated_W2T);
   }
 
   tensor_W2T = Updated_W2T;
@@ -890,7 +890,7 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
 }
 
 void run_composite_circuit(const Options& options, MOTION::TwoPartyTensorBackend& backend) {
-  int iterations = 1;
+  int iterations = 3;
   std::pair<ENCRYPTO::ReusableFiberFuture<std::vector<std::uint64_t>>,
             ENCRYPTO::ReusableFiberFuture<std::vector<std::uint64_t>>>
       output_future;
@@ -913,7 +913,7 @@ void run_composite_circuit(const Options& options, MOTION::TwoPartyTensorBackend
       // if (i % 2 == 0) std::cout << "\n";
       std::cout << MOTION::new_fixed_point::decode<uint64_t, long double>(main1[i],
                                                                           options.fractional_bits)
-                << " ";
+                << ",";
     }
 
     std::cout << "\n";
@@ -923,7 +923,7 @@ void run_composite_circuit(const Options& options, MOTION::TwoPartyTensorBackend
       // if (i % 4 == 0) std::cout << "\n";
       std::cout << MOTION::new_fixed_point::decode<uint64_t, long double>(main2[i],
                                                                           options.fractional_bits)
-                << " ";
+                << ",";
     }
     //   std::vector<long double> mod_x;
     //   // std::string path = std::filesystem::current_path();
@@ -945,7 +945,7 @@ void run_composite_circuit(const Options& options, MOTION::TwoPartyTensorBackend
         k = z * 784 - 1;
       }
     }
-    
+
     std::cout << main1.size() << std::endl;
     std::cout << main2.size() << std::endl;
 

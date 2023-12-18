@@ -1,6 +1,11 @@
-// ./bin/machine_learning --sample-file sample_file --actual-label-file actual_label
-// --fractional-bits 13 --sample-size 20 --classes 10
-//1000 - 80, 10000 - 91, 15000 - 94
+/*
+
+./bin/machine_learning_1l_clear_5sigmoid --sample-file sample_file --actual-label-file
+  actual_label --fractional-bits 13 --sample-size 20 --classes 10
+ */
+
+// 1000 - 78.66 , 10000 - 87.72 , 15000 - 88.53 , 20000 - 88.9 - 3 piece sigmoid
+// 1000 - 88.67 , 10000 - 90.58 , 15000 -91 , 20000 - 91.13 - 5 piece sigmoid
 #include <algorithm>
 #include <bitset>
 #include <filesystem>
@@ -81,6 +86,10 @@ void generate_random_numbers(std::vector<int>* sample_file, const Options& optio
       int randomNumber = distribution(gen);
       sample_file->push_back(randomNumber);
     }
+
+    //     for(int i = 0; i < numberOfRandomNumbers; ++i) {
+    //   sample_file->push_back(i+1);
+    // }
 }
 
 bool is_empty(std::ifstream& file) { return file.peek() == std::ifstream::traits_type::eof(); }
@@ -94,12 +103,43 @@ void read_input(std::vector<float>& row_major_input,std::vector<float>& column_m
     generate_random_numbers(&sample_file, options);
   }
 
-  std::ifstream file;
-  std::string path = home_dir + "/data/ImageProvider/sample_data/";
+   std::ifstream file;
+   std::string path = home_dir + "/data/ImageProvider/sample_data/";
   std::string input_path;
+  
+    //TESTing 
+  // std::string path1 = home_dir + "/data/ImageProvider/sample_data/"+std::to_string(options.m)+"_folder";
+  // std::string path2 = home_dir + "/data/ImageProvider/sample_data/"+std::to_string(options.m)+"_images";
+  
+  // std::ifstream file_1 , file_2;
+  // file_1.open(path1);
+  // int temp;
+  // std::vector<int>folder;
+  // std::vector<int>images;
+  // while(file_1)
+  // {
+  //   file_1>>temp;
+  //   std::cout<<temp<<" ";
+  //   folder.push_back(temp);
+  // }
+  // std::cout<<"\n";
+
+  // file_2.open(path2);
+  //   while(file_2)
+  // {
+  //   file_2>>temp;
+  //   std::cout<<temp<<" ";
+  //   images.push_back(temp);
+  // }
+  // std::cout<<"\n";
+
+  //**********************************************************************
 
   for (int i = 0; i < options.m; i++) {
     input_path = path + "images_folder" + std::to_string((int) (i / (options.m / options.classes))) + "/X" + std::to_string(sample_file[i]) + ".csv";
+    //input_path = path + "images_folder"+std::to_string(folder[i])+"/X"+std::to_string(images[i])+".csv";
+
+    // std::cout<<input_path<<"\n";
 
     file.open(input_path);
     std::string str;
@@ -126,7 +166,7 @@ void read_input(std::vector<float>& row_major_input,std::vector<float>& column_m
 
 uint64_t sigmoid(uint64_t dot_product, int frac_bits) {
   auto encoded_threshold = MOTION::new_fixed_point::encode<std::uint64_t, float>(0.5, frac_bits);
-  auto neg_encoded_threshold =
+  auto neg_encoded_threshold=
       MOTION::new_fixed_point::encode<std::uint64_t, float>(-0.5, frac_bits);
 
   std::uint64_t msb = (uint64_t)1 << 63;
@@ -144,6 +184,73 @@ uint64_t sigmoid(uint64_t dot_product, int frac_bits) {
       return dot_product + encoded_threshold;
     }
   }
+}
+
+uint64_t sigmoid5(uint64_t input, int frac_bits) {  
+/*
+10 ^-4, x ≤ -5
+0.02776 · x + 0.145, -5 < x ≤ -2.5
+0.17 · x + 0.5, -2.5 < x ≤ 2.5
+0.02776 · x + 0.85498, 2.5 < x ≤ 5
+1 - 10^4, x > 5
+*/
+
+    const uint64_t a = MOTION::new_fixed_point::encode<uint64_t, float>(-5, frac_bits);
+    const uint64_t b = MOTION::new_fixed_point::encode<uint64_t, float>(-2.5, frac_bits);
+    const uint64_t c = MOTION::new_fixed_point::encode<uint64_t, float>(2.5, frac_bits);
+    const uint64_t d = MOTION::new_fixed_point::encode<uint64_t, float>(5, frac_bits);
+
+    // std::cout<<"d: "<<d<<" "<<input<<"\n";
+
+    const uint64_t constant1 = MOTION::new_fixed_point::encode<uint64_t, float>(0.0001, frac_bits);
+    const uint64_t constant2 = MOTION::new_fixed_point::encode<uint64_t, float>(0.02776, frac_bits);
+    const uint64_t constant3 = MOTION::new_fixed_point::encode<uint64_t, float>(0.145, frac_bits);
+    const uint64_t constant4 = MOTION::new_fixed_point::encode<uint64_t, float>(0.17, frac_bits);
+    const uint64_t constant5 = MOTION::new_fixed_point::encode<uint64_t, float>(0.5, frac_bits);
+    const uint64_t constant6 = MOTION::new_fixed_point::encode<uint64_t, float>(0.02776, frac_bits);
+    const uint64_t constant7 = MOTION::new_fixed_point::encode<uint64_t, float>(0.85498, frac_bits);
+    const uint64_t constant8 = MOTION::new_fixed_point::encode<uint64_t, float>(0.9999, frac_bits);
+    const uint64_t one= MOTION::new_fixed_point::encode<uint64_t, float>(1, frac_bits);
+     
+    std::uint64_t msb = (uint64_t)1 << 63;
+
+    if(msb & input)
+    {
+    if(input<=a)
+    return constant1;
+    else if(input>a && input<=b)
+    {   std::uint64_t output = constant2*input;
+        auto output_dec = MOTION::new_fixed_point::decode<std::uint64_t, float>(output, frac_bits);
+        return output_dec+constant3;
+    }
+    else if(input>b)
+    {
+      std::uint64_t output = constant4*input;
+      auto output_dec = MOTION::new_fixed_point::decode<std::uint64_t, float>(output, frac_bits);
+      return output_dec+constant5;
+    }
+    }
+    else
+    {
+       //std::cout<<"positive number\n";
+      if(input<=c)
+      {
+        std::uint64_t output = constant4*input;
+        auto output_dec = MOTION::new_fixed_point::decode<std::uint64_t, float>(output, frac_bits);
+        return output_dec+constant5;
+      }
+      else if(input>c && input<=d)
+      {
+        std::uint64_t output = constant6*input;
+        auto output_dec = MOTION::new_fixed_point::decode<std::uint64_t, float>(output, frac_bits);
+        return output_dec+constant7;
+      }
+      else
+      {
+        //std::cout<<"greater than 5\n";
+      return constant8;
+      }
+    }
 }
 
 std::vector<std::uint64_t> find_weights(std::vector<float> row_major_input,std::vector<float>column_major_input,std::vector<std::uint64_t>theta_current,Options& options, bool write_to_file) {
@@ -173,9 +280,28 @@ std::vector<std::uint64_t> find_weights(std::vector<float> row_major_input,std::
                  });
 
   std::vector<std::uint64_t> sigmoid_dp(m * classes, 0);
-  std::transform(dot_product_decoded.begin(), dot_product_decoded.end(), sigmoid_dp.begin(),
-                 [frac_bits](auto j) { return sigmoid(j, frac_bits); });
+  // std::transform(dot_product_decoded.begin(), dot_product_decoded.end(), sigmoid_dp.begin(),
+  //                [frac_bits](auto j) { return sigmoid(j, frac_bits); });
+  
 
+  //   std::cout<<"dot product output : \n";
+  // for(int i=0;i<dot_product_decoded.size();i++)
+  // {
+  //   std::cout<<MOTION::new_fixed_point::decode<std::uint64_t, float>(dot_product_decoded[i], frac_bits)<<" ";
+  // }
+  // std::cout<<"\n";
+
+  
+  std::transform(dot_product_decoded.begin(), dot_product_decoded.end(), sigmoid_dp.begin(),
+                 [frac_bits](auto j) { return sigmoid5(j, frac_bits); });
+
+  
+  // std::cout<<"sigmoid output : \n";
+  // for(int i=0;i<sigmoid_dp.size();i++)
+  // {
+  //   std::cout<<MOTION::new_fixed_point::decode<std::uint64_t, float>(sigmoid_dp[i], frac_bits)<<" ";
+  // }
+  // std::cout<<"\n";
   
   std::string home_dir=std::getenv("BASE_DIR");
   
@@ -192,12 +318,50 @@ std::vector<std::uint64_t> find_weights(std::vector<float> row_major_input,std::
   }
   file.close();
 
+//TESTING 
+  //  std::string path = home_dir + "/data/ImageProvider/sample_data/"+std::to_string(options.m)+"_folder";
+  // std::vector<float> actual_label;
+  // std::vector<float>actual_label_test;
+  // actual_label.assign(10*options.m,0);
+  //   file.open(path);
+  //   while(!file.eof())
+  // {
+  //   float data;
+  //   file>>data;
+  //   std::cout<<data<<" ";
+  //   actual_label_test.push_back(data);
+  // }
+  // std::cout<<"\n";
+  // file.close();
+
+  // int t=0;
+  // std::cout<<"testing: \n";
+  // for(int i = 0;i<options.m;i++)
+  // {
+  //   t = i*10+actual_label_test[i];
+  //   std::cout<<t<<" ";
+  //   actual_label[t]=1; 
+  // }
+  // std::cout<<"\n";
+
+  // std::cout<<"Actual label : \n";
+  // for(int i = 0;i<actual_label.size();i++)
+  // {
+  //   std::cout<<actual_label[i]<<" ";
+  //   if((i+1)%10==0)std::cout<<"\n";
+  // }
+
+  // std::cout<<"end\n";
+//***************************************************************************
+
   std::vector<float> actual_label_transpose;
   for (int i = 0; i < classes; ++i) {
     for (int j = 0; j < m; j++) {
       auto data = actual_label[j * classes + i];
+      // std::cout<<data<<" ";
     actual_label_transpose.push_back(data);
     }
+    // std::cout<<"\n";
   }
 
   std::vector<std::uint64_t> encoded_actual_label_transpose(m * classes, 0);
@@ -219,10 +383,10 @@ std::vector<std::uint64_t> find_weights(std::vector<float> row_major_input,std::
                    return MOTION::new_fixed_point::decode<std::uint64_t, float>(j, frac_bits);
                  });
 
-  std::uint64_t rate = MOTION::new_fixed_point::encode<std::uint64_t, float>(0.005, 13);
+  std::uint64_t rate = MOTION::new_fixed_point::encode<std::uint64_t, float>(0.01, 13);
 
   std::transform(loss_function_decoded.begin(), loss_function_decoded.end(),
-                 loss_function_decoded.begin(), [rate, m](auto j) { return rate * j; });
+                 loss_function_decoded.begin(), [rate](auto j) { return rate * j; });
 
   std::transform(loss_function_decoded.begin(), loss_function_decoded.end(),
                  loss_function_decoded.begin(), [frac_bits](auto j) {
@@ -237,21 +401,37 @@ std::vector<std::uint64_t> find_weights(std::vector<float> row_major_input,std::
     std::ofstream out_file;
     path = home_dir+"/build_debwithrelinfo_gcc/Theta_new";
 
-    out_file.open(path,std::ios_base::app);
+    out_file.open(path,std::ios_base::out);
 
     std::vector<float> decoded_theta_new(size_single_input * classes, (uint64_t)0);
     std::transform(theta_new.begin(), theta_new.end(), decoded_theta_new.begin(),
                   [frac_bits](auto& j) {
-                    return MOTION::new_fixed_point::decode<std::uint64_t, float>(j, frac_bits);
+                  return MOTION::new_fixed_point::decode<std::uint64_t, float>(j, frac_bits);
                   });
-    
-    for (int i = 0; i < decoded_theta_new.size(); i++) {
-      out_file<<decoded_theta_new[i]<<",";
-    }
+  
 
-    out_file<<"\n\n";
+
+    for (int i = 0; i < decoded_theta_new.size(); i++) {
+      out_file<<decoded_theta_new[i]<<"\n";
+    }
     out_file.close(); 
-  } 
+  
+
+    // for printing theta
+  // int k = 783;
+  // int z = 1;
+  // std::cout << "theta: \n";
+  // for (int i = 0; i < decoded_theta_new.size(); i++) {
+  //   std::cout << decoded_theta_new[i]<< ",";
+  //     if (i > k) {
+  //     std::cout<< "********************************\n \n \n*************************************";
+  //       z = z + 1;
+  //       k = z * 784 - 1;
+  //     }
+  //   }
+
+
+  }
   return theta_new;
 }
 
@@ -273,9 +453,9 @@ void read_test_data(std::vector<float>&test_input, std::vector<float>& test_inpu
   std::ifstream file;
   std::string path = home_dir + "/data/ImageProvider/images_actualanswer";
   std::string input_path;
-  int test_size = 100;
+  int test_size = 10000;
 
-  for (int i = 0; i < test_size; i++) {
+  for (int i = 1; i <= test_size; i++) {
     input_path = path + "/X" + std::to_string(i) + ".csv";
     file.open(input_path);
     std::string str;
@@ -335,10 +515,11 @@ int test_accuracy(std::vector<std::uint64_t>theta, const Options& options) {
                    return MOTION::new_fixed_point::decode<std::uint64_t, float>(j, frac_bits);
                  });
 
- 
   std::vector<std::uint64_t> sigmoid_dp(test_size * classes, 0);
-  std::transform(dot_product_decoded.begin(), dot_product_decoded.end(), sigmoid_dp.begin(),
-                 [frac_bits](auto j) { return sigmoid(j, frac_bits); });
+  // std::transform(dot_product_decoded.begin(), dot_product_decoded.end(), sigmoid_dp.begin(),
+  //                [frac_bits](auto j) { return sigmoid(j, frac_bits); });
+    std::transform(dot_product_decoded.begin(), dot_product_decoded.end(), sigmoid_dp.begin(),
+                 [frac_bits](auto j) { return sigmoid5(j, frac_bits); });
   
   std::vector<std::uint64_t> sigmoid_dp_transpose;
   for (int i = 0; i < test_size; i++) {
@@ -431,29 +612,24 @@ int main(int argc, char* argv[]) {
   }
   std::vector<float>theta;
 
-  std::string home_dir=std::getenv("BASE_DIR");
-  std::string path =  home_dir + "/build_debwithrelinfo_gcc/Theta_new";
-  std::ifstream file;
+  // std::string home_dir=std::getenv("BASE_DIR");
+  // std::string path =  home_dir + "/build_debwithrelinfo_gcc/Theta_new";
+  // std::ifstream file;
 
-  file.open(path);
-  std::string str;
-  int line = 0;
+  // file.open(path);
+  // std::string str;
+  // float x;
+  
+  // while(file)
+  // { 
+  //   file>>x;
+  //   theta.push_back(x);
+  // }
 
-  if(std::getline(file, str)) {
-    std::stringstream obj(str);
-    std::string temp;
-    while(std::getline(obj, temp, ',')) {
-      auto input = std::stof(temp);
-      theta.push_back(input);
-    }
-    line++;
-  }
-  file.close();
-
-  std::vector<std::uint64_t> encoded_theta(theta.size());
-  std::transform(theta.begin(), theta.end(), encoded_theta.begin(), [frac_bits](auto j) {
-    return MOTION::new_fixed_point::encode<std::uint64_t, float>(j, frac_bits);
-  });
+  std::vector<std::uint64_t> encoded_theta(theta_current.size());
+  // std::transform(theta.begin(), theta.end(), encoded_theta.begin(), [frac_bits](auto j) {
+  //   return MOTION::new_fixed_point::encode<std::uint64_t, float>(j, frac_bits);
+  // });
   
   int accuracy = test_accuracy(theta_current, *options);
   std::cout << "\nAccuracy: " << accuracy << "\n";
