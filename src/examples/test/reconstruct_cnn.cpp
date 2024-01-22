@@ -12,9 +12,10 @@
 #include <boost/asio.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
-#include "./fixed-point.h"
+#include "utility/new_fixed_point.h"
+
 /*
-./bin/Reconstruct --current-path ${BASE_DIR}/data/ImageProvider/Final_Output_Shares
+./bin/reconstruct_cnn --current-path ${BASE_DIR}/build_debwithrelinfo_gcc
 */
 
 using namespace boost::asio;
@@ -62,11 +63,17 @@ int main(int argc, char* argv[]) {
   std::string path = options->currentpath;
   try {
     // Reading contents from file
-    std::string t1 = path + "/server0_shares_X";
-    std::string t2 = path + "/server1_shares_X";
+    std::string t1 = path + "/server0/outputshare_0";
+    std::string t2 = path + "/server1/outputshare_1";
+
+    std::cout << t1 << " " << t2 << "\n";
 
     std::ifstream file1, file2;
     float y;
+    std::ofstream file;
+
+    std::string t3 = path + "/cnn_result_layer1";
+    file.open(t3);
 
     try {
       file1.open(t1);
@@ -78,17 +85,34 @@ int main(int argc, char* argv[]) {
       std::cerr << "Error while opening the input files.\n";
       return EXIT_FAILURE;
     }
-    Shares shares_data_0[1], shares_data_1[1];
     std::uint64_t temp;
     // get input data
     // std::vector<float> data1
 
-    std::vector<bool> final_answer;
-    for (int i = 0; i < 1; i++) {
+    int output_channels, output_rows, output_cols;
+    // file1 >> output_channels >> output_rows >> output_cols;
+    // file2 >> output_channels >> output_rows >> output_cols;
+    file1 >> output_rows >> output_cols;
+    file2 >> output_rows >> output_cols;
+
+    // std::cout << output_channels << " " << output_rows << " " << output_cols << "\n";
+    std::cout << output_rows << " " << output_cols << "\n";
+
+    // std::cout << (output_channels * output_rows * output_cols) << "\n";
+
+    // int output_size = (output_channels * output_rows * output_cols);
+    int output_size = (output_rows * output_cols);
+
+    Shares shares_data_0[output_size], shares_data_1[output_size];
+
+    for (int i = 0; i < (output_rows * output_cols); i++) {
       file1 >> shares_data_0[i].Delta;
       file1 >> shares_data_0[i].delta;
       file2 >> shares_data_1[i].Delta;
       file2 >> shares_data_1[i].delta;
+
+      // std::cout << shares_data_0[i].Delta << " " << shares_data_0[i].delta << " "
+      //           << shares_data_1[i].Delta << " " << shares_data_1[i].delta << "\n";
       try {
         if (shares_data_0[i].Delta != shares_data_1[i].Delta)
           std::cout << "Error at " << i << " index \n";
@@ -97,16 +121,13 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
       }
       temp = shares_data_0[i].Delta - shares_data_0[i].delta - shares_data_1[i].delta;
-      y = MOTION::new_fixed_point::decode<std::uint64_t, float>(temp, 13);
-      // std::cout << temp <<" ";
-      // final_answer.push_back(temp);
+      // y = temp / (pow(2, options->fractional_bits));
+      y = MOTION::new_fixed_point::decode<uint64_t, float>(temp, 13);
+
+      std::cout << y << "\n";
+      file << y << "\n";
     }
-    // int i = 0;
-    // while (final_answer[i] != 0) {
-    //   i++;
-    // }
-    std::cout << "\nThe image shared is detected as"
-              << ":" << y << "\n";
+    file.close();
   } catch (std::runtime_error& e) {
     std::cerr << "ERROR OCCURRED: " << e.what() << "\n";
     std::cerr << "ERROR Caught !!"

@@ -7,6 +7,7 @@ add_executable(matrixmultiply_test matrixmultiply_test.cpp)
 add_executable(training_neuralnet_clear training_neuralnet_clear.cpp)
 add_executable(training_neuralnet_smpc training_neuralnet_smpc.cpp)
 add_executable(machine_learning_1l_smpc machine_learning_1l_smpc.cpp)
+add_executable(cnn cnn.cpp)
 
 
 find_package(Boost COMPONENTS json log program_options REQUIRED)
@@ -20,6 +21,7 @@ target_compile_features(matrixmultiply_test PRIVATE cxx_std_20)
 target_compile_features(training_neuralnet_clear PRIVATE cxx_std_20)
 target_compile_features(training_neuralnet_smpc PRIVATE cxx_std_20)
 target_compile_features(machine_learning_1l_smpc PRIVATE cxx_std_20)
+target_compile_features(cnn PRIVATE cxx_std_20)
 
 
 target_link_libraries(readfile
@@ -86,7 +88,12 @@ target_link_libraries(machine_learning_1l_smpc
 )
 
 
-
+target_link_libraries(cnn
+    MOTION::motion
+    Boost::json
+    Boost::log
+    Boost::program_options
+)
 
 
 

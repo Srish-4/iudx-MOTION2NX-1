@@ -155,7 +155,7 @@ split_info_length=${#split_info_layers[@]}
 
 for ((layer_id=1; layer_id<=$number_of_layers; layer_id++)); do
    num_splits=1
-   echo $layer_id
+   # echo $layer_id
    # Check for information in split info
    if [[ $split_info_index -lt $split_info_length ]] && [[ $layer_id -eq ${split_info_layers[split_info_index]} ]];
    then

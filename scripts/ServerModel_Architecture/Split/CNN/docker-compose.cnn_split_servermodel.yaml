@@ -74,3 +74,5 @@ services:
 
 volumes:
   smpc-server1-volume:
+  smpc-server0-volume:
+
