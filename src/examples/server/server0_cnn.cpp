@@ -425,12 +425,12 @@ void operations()
     //output=output+random(local secret share)
     __gnu_parallel::transform(prod1.begin(), prod1.end(), randomnum.begin(), prod1.begin() , std::plus{});   
     
-    //     std::cout<<"prod1 after adding secret share 0 : "<<"\n";
-    // for(int i=0;i<prod1.size();i++)
-    //  {
-    //    std::cout<<prod1[i]<<" ";
-    //  }  
-    //  std::cout<<"\n";
+    std::cout<<"prod1 after adding secret share 0 : "<<"\n";
+    for(int i=0;i<prod1.size();i++)
+     {
+       std::cout<<prod1[i]<<" ";
+     }  
+     std::cout<<"\n";
     operations_done_flag++;
 }
 
@@ -871,7 +871,6 @@ std::cout<<"Sending Image shares to the helper node\n";
       return EXIT_FAILURE;
     }
         
-    testMemoryOccupied(WriteToFiles,0, options->current_path);
     //Waiting for the operations to complete. 
     std::cout<<std::endl;
     while(operations_done_flag!=2)
@@ -900,6 +899,7 @@ std::cout<<"Sending Image shares to the helper node\n";
     }
     comm_layer->shutdown();
   auto stop = high_resolution_clock::now();
+  testMemoryOccupied(WriteToFiles,0, options->current_path);
   auto duration = duration_cast<milliseconds>(stop - start);
   
   std::cout<<"Duration:"<<duration.count()<<"\n";

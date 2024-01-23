@@ -818,8 +818,6 @@ int main(int argc, char* argv[]) {
       return EXIT_FAILURE;
     }
 
-
-      testMemoryOccupied(WriteToFiles,1, options->current_path);
       //Waiting for the operations to complete. 
       while(operations_done_flag!=2)
         {
@@ -844,6 +842,8 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
       }
       comm_layer->shutdown();
+
+      testMemoryOccupied(WriteToFiles,1, options->current_path);
       auto stop = high_resolution_clock::now();
       auto duration = duration_cast<milliseconds>(stop - start);
       std::string t1 = options->current_path + "/" + "AverageTimeDetails1";
