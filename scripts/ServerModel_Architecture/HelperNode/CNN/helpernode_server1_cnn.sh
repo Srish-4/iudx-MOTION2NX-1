@@ -106,7 +106,7 @@ fractional_bits=`echo $smpc_config | jq -r .fractional_bits`
 #########################Weights Share Receiver ############################################################################################
 echo "Weight shares receiver starts"
 $build_path/bin/Weights_Share_Receiver_CNN --my-id 1 --port $cs1_port_model_receiver --current-path $build_path > $debug_1/Weights_Share_Receiver.txt &
-pid2=$!
+pid1=$!
 
 #########################Image Share Receiver ############################################################################################
 echo "Image shares receiver starts"

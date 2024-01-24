@@ -8,9 +8,9 @@ services:
   smpc-server0:
     image: ghcr.io/datakaveri/motion2nx:local
     volumes:
-      - ../../../logs:/usr/share/app/logs
-      - ../../../config_files:/usr/share/app/config_files:ro
-      - ../../../scripts:/usr/share/app/scripts:rw
+      - ../../../../logs:/usr/share/app/logs
+      - ../../../../config_files:/usr/share/app/config_files:ro
+      - ../../../../scripts:/usr/share/app/scripts:rw
 
     restart: no
       #    networks:
@@ -25,22 +25,24 @@ services:
       - "4012:4012"
       # cs0_port_image_receiver
       - "4014:4014"
-    mem_limit: 600m
-    cpus: 0.750
+    #mem_limit: 600m
+    #cpus: 0.750
+    mem_limit: 3300m
+    cpus: 1.7
     logging:
       driver: "json-file"
       options:
         max-file: "5"
         max-size: "10m"
-    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/CNN && ./helpernode_server0_cnn.sh && while (true);  do  sleep 10; done"
+    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/CNN/ && ./helpernode_server0_cnn.sh && while (true);  do  sleep 10; done"
 
   # SMPC server 1
   smpc-server1:
     image: ghcr.io/datakaveri/motion2nx:local
     volumes:
-      - ../../../config_files:/usr/share/app/config_files:ro
-      - ../../../scripts:/usr/share/app/scripts:rw
-      - ../../logs:/usr/share/app/logs
+      - ../../../../config_files:/usr/share/app/config_files:ro
+      - ../../../../scripts:/usr/share/app/scripts:rw
+      - ../../../../logs:/usr/share/app/logs
     restart: no
     network_mode:
       "host"
@@ -54,22 +56,24 @@ services:
       - "4013:4013"
       # cs1_port_image_receiver
       - "4015:4015"
-    mem_limit: 600m
-    cpus: 0.750
+    #mem_limit: 600m
+    mem_limit: 3300m 
+    cpus: 1.7
+    #cpus: 0.750
     logging:
       driver: "json-file"
       options:
         max-file: "5"
         max-size: "10m"
-    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/CNN && ./helpernode_server1_cnn.sh && while (true);  do  sleep 10; done"
+    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/CNN/ && ./helpernode_server1_cnn.sh && while (true);  do  sleep 10; done"
 
   # SMPC server 2 - helpernode server
   smpc-server2:
     image: ghcr.io/datakaveri/motion2nx:local
     volumes:
-      - ../../../config_files:/usr/share/app/config_files:ro
-      - ../../../scripts:/usr/share/app/scripts:rw
-      - ../../logs:/usr/share/app/logs
+      - ../../../../config_files:/usr/share/app/config_files:ro
+      - ../../../../scripts:/usr/share/app/scripts:rw
+      - ../../../../logs:/usr/share/app/logs
     restart: no
     network_mode: host
     # networks:
@@ -84,7 +88,7 @@ services:
       options:
         max-file: "5"
         max-size: "10m"
-    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/CNN && ./helpernode_server2_cnn.sh && while (true);  do  sleep 10; done"
+    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/CNN/ && ./helpernode_server2_cnn.sh && while (true);  do  sleep 10; done"
 volumes:
   smpc-server1-volume:
   smpc-server0-volume:

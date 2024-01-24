@@ -238,10 +238,6 @@ done
 
       echo "Output shares of server 0 received by the Image provider"
       echo "Output shares of server 1 received by the Image provider"
-      
-      echo "Reconstruction Starts"
-      #$build_path/bin/Reconstruct --current-path $image_provider_path 
-      $build_path/bin/Reconstruct --current-path $image_provider_path --fractional-bits $fractional_bits
       wait 
 
 awk '{ sum += $1 } END { print sum }' AverageTimeDetails0 >> AverageTime0

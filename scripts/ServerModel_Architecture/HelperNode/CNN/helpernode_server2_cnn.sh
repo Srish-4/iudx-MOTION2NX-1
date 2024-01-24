@@ -49,6 +49,7 @@ cs1_port_inference=`echo $smpc_config | jq -r .cs1_port_inference`
 helpernode_port_inference=`echo $smpc_config | jq -r .helpernode_port_inference`
 
 number_of_layers=`echo $smpc_config | jq -r .number_of_layers`
+layer_types=($(echo "$smpc_config" | jq -r '.layer_types | @sh'))
 fractional_bits=13
 ##########################################################################################################################################
 
@@ -59,13 +60,12 @@ fi
 
 echo "Helper node starts"
 
-layer_types=($(cat "$build_path/layer_types0"))
-
+# layer_types=($(cat "$build_path/layer_types0"))
 
 ############################ Inputs for inferencing tasks #######################################################################################
 # ####################################### Matrix multiplication layer 1 ###########################################################################
-for((layer_id=1; layer_id<=$number_of_layers; layer_id++))
-do
+for((layer_id=0; layer_id<$number_of_layers; layer_id++))
+do 
 
 if [ ${layer_types[layer_id]} -eq 1 ];then 
 
