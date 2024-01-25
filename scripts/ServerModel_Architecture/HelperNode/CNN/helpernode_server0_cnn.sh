@@ -27,6 +27,7 @@ helpernode_dns_resolve=`echo $smpc_config | jq -r .helpernode_dns_resolve`
 cs0_host=`echo $smpc_config | jq -r .cs0_host`
 cs1_host=`echo $smpc_config | jq -r .cs1_host`
 helpernode_host=`echo $smpc_config | jq -r .helpernode_host`
+reverse_ssh_host=`echo $smpc_config | jq -r .reverse_ssh_host`
 
 if [[ $cs0_dns_resolve == "true" ]];
 then 
@@ -229,8 +230,7 @@ done
 
          end=$(date +%s)
       
-
-      $build_path/bin/final_output_provider --my-id 0 --connection-port $cs0_port_cs0_output_receiver --config-input $image_share --current-path $build_path > $debug_0/final_output_provider.txt &
+      $build_path/bin/final_output_provider --my-id 0 --connection-ip $reverse_ssh_host --connection-port $cs0_port_cs0_output_receiver --config-input $image_share --current-path $build_path > $debug_0/final_output_provider0.txt &
       pid3=$!
       wait $pid3
       echo "Output shares of server 0 sent to the image provider"

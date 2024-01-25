@@ -55,6 +55,7 @@ helpernode_dns_resolve=`echo $smpc_config | jq -r .helpernode_dns_resolve`
 cs0_host=`echo $smpc_config | jq -r .cs0_host`
 cs1_host=`echo $smpc_config | jq -r .cs1_host`
 helpernode_host=`echo $smpc_config | jq -r .helpernode_host`
+reverse_ssh_host=`echo $smpc_config | jq -r .reverse_ssh_host`
 
 
 if [[ $cs0_dns_resolve == "true" ]];
@@ -207,7 +208,7 @@ done
 
    end=$(date +%s)
 
-   $build_path/bin/final_output_provider --my-id 1 --connection-port $cs0_port_cs1_output_receiver --connection-ip $cs0_host --config-input $image_share --current-path $build_path > $debug_1/final_output_provider.txt &
+   $build_path/bin/final_output_provider --my-id 1 --connection-ip $reverse_ssh_host --connection-port $cs0_port_cs1_output_receiver --config-input $image_share --current-path $build_path > $debug_1/final_output_provider1.txt &
    pid4=$!
    wait $pid4
    check_exit_statuses $?  
