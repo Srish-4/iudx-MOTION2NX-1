@@ -123,13 +123,13 @@ echo "Weight shares received"
 #########################Image Share Receiver ############################################################################################
 echo "Image shares receiver starts"
 
-$build_path/bin/Image_Share_Receiver_CNN --my-id 0 --port $cs0_port_image_receiver --fractional-bits $fractional_bits --file-names $image_config --current-path $build_path > $debug_0/Image_Share_Receiver.txt &
-pid1=$!
+# $build_path/bin/Image_Share_Receiver_CNN --my-id 0 --port $cs0_port_image_receiver --fractional-bits $fractional_bits --file-names $image_config --current-path $build_path > $debug_0/Image_Share_Receiver.txt &
+# pid1=$!
 
 #########################Image Share Provider ############################################################################################
 echo "Image Provider starts"
-$build_path/bin/image_provider_CNN --compute-server0-ip $cs0_host --compute-server0-port $cs0_port_image_receiver --compute-server1-ip $cs1_host --compute-server1-port $cs1_port_image_receiver --fractional-bits $fractional_bits --index $image_id --filepath $image_path > $debug_0/image_provider.txt &
-pid3=$!
+# $build_path/bin/image_provider_CNN --compute-server0-ip $cs0_host --compute-server0-port $cs0_port_image_receiver --compute-server1-ip $cs1_host --compute-server1-port $cs1_port_image_receiver --fractional-bits $fractional_bits --index $image_id --filepath $image_path > $debug_0/image_provider.txt &
+# pid3=$!
 
 wait $pid3 $pid1
 
@@ -257,7 +257,7 @@ for ((layer_id=1; layer_id<=$number_of_layers; layer_id++)); do
       num_kernels=$(jq -r '.kernels' <<< "$split");
 
       x=$(($num_kernels/$num_splits))
-      for(( m = 1; m <= $num_splits; m++ )); do 
+      for(( m = 1; m <= $num_splilts; m++ )); do 
          let l=$((m-1)) 
          let a=$((l*x+1))
          let b=$((m*x))
@@ -268,7 +268,7 @@ for ((layer_id=1; layer_id<=$number_of_layers; layer_id++)); do
          check_exit_statuses $? 
          echo "Layer $layer_id, split $m: Convolution is done."
 
-         tail -n +2 server0/outputshare_0 >> server0/final_outputshare_0
+         # tail -n +2 server0/outputshare_0 >> server0/final_outputshare_0
 
          $build_path/bin/tensor_gt_relu --my-id 0 --party 0,$cs0_host,$relu0_port_inference --party 1,$cs1_host,$relu1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --filepath file_config_input0 --current-path $build_path > $debug_0/tensor_gt_relu0_layer${layer_id}.txt &
          pid1=$!
@@ -276,6 +276,7 @@ for ((layer_id=1; layer_id<=$number_of_layers; layer_id++)); do
          check_exit_statuses $?
          echo "Layer $layer_id: ReLU is done"
          tail -n +2 server0/outputshare_0 >> server0/cnn_outputshare_0
+         tail -n +2 server0/outputshare_0 >> server0/final_outputshare_0
 
       done
 

@@ -26,6 +26,8 @@ struct Options {
   int cs1_port;
   std::size_t fractional_bits;
   int index;
+  int image_channels;
+  int image_dimensions;
   std::string NameofImageFile;
   std::string fullfilepath;
 };
@@ -71,6 +73,8 @@ std::optional<Options> parse_program_options(int argc, char* argv[]) {
     ("compute-server1-ip", po::value<std::string>()->default_value("127.0.0.1"), "IP address of compute server 1")
     ("compute-server1-port", po::value<int>()->required(), "Port number of compute server 1")
     ("index", po::value<int>()->required(), "Index of image file")
+    ("image_dim", po::value<int>()->required(), "Image dimensions")
+    ("image_channels", po::value<int>()->required(), "Image channels")
     ("fractional-bits", po::value<size_t>()->required(), "Number of fractional bits")
     ("filepath", po::value<std::string>()->required(), "Name of the image file for which shares should be created")
     ;
@@ -94,6 +98,8 @@ std::optional<Options> parse_program_options(int argc, char* argv[]) {
   options.cs1_ip = vm["compute-server1-ip"].as<std::string>();
   options.cs1_port = vm["compute-server1-port"].as<int>();
   options.index = vm["index"].as<int>();
+  options.image_dimensions = vm["image_dim"].as<int>();
+  options.image_channels = vm["image_channels"].as<int>();
   options.NameofImageFile = "X" + std::to_string(options.index);
   options.fullfilepath = vm["filepath"].as<std::string>();
   options.fractional_bits = vm["fractional-bits"].as<size_t>();
@@ -201,8 +207,12 @@ int main(int argc, char* argv[]) {
     std::cerr << "Error while parsing the given input options.\n";
     return EXIT_FAILURE;
   }
-  int channels = 1, rows = 28, columns = 28;  // hardcoded
+  int channels = options->image_channels, rows = options->image_dimensions,
+      columns = options->image_dimensions;
+  // int channels = 3, rows = 32,columns = 32;  // hardcoded
+
   int num_elements = channels * rows * columns;
+  std::cout << "num elements: " << num_elements << "\n";
   Shares cs0_data[num_elements];
   Shares cs1_data[num_elements];
   // Reading contents from image file

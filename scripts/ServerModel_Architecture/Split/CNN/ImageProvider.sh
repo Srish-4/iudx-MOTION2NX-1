@@ -43,6 +43,19 @@ cs0_port_cs1_output_receiver=`echo $smpc_config | jq -r .cs0_port_cs1_output_rec
 
 fractional_bits=`echo $smpc_config | jq -r .fractional_bits`
 
+# echo "fractional_bits : " $fractional_bits
+
+image_dimensions=`echo $smpc_config | jq -r .image_rows`
+image_channels=`echo $smpc_config | jq -r .channels`
+
+# echo "image dimensions : " $image_dimensions
+# echo "image channels : " $image_channels
+
+
+# fractional_bits=`echo $smpc_config | jq -r .fractional_bits`
+
+
+
 # Index of the image for which inferencing task is run
 image_id=`echo $smpc_config | jq -r .image_id`
 
@@ -52,10 +65,11 @@ then
 	mkdir -p $debug_ImageProv
 fi
 
+# echo "image dimensions : " $image_dimensions
 #--------------------------------------------- Image Share Provider -------------------------------------------------------#
 # Create Image shares and send it to server 0 and server 1
 echo "Image Provider starts"
-$build_path/bin/image_provider_CNN --compute-server0-ip $cs0_host --compute-server0-port $cs0_port_image_receiver --compute-server1-ip $cs1_host --compute-server1-port $cs1_port_image_receiver --fractional-bits $fractional_bits --index $image_id --filepath $image_path > $debug_ImageProv/image_provider.txt &
+$build_path/bin/image_provider_CNN --compute-server0-ip $cs0_host --compute-server0-port $cs0_port_image_receiver --compute-server1-ip $cs1_host --compute-server1-port $cs1_port_image_receiver --fractional-bits $fractional_bits --index $image_id --filepath $image_path --image_dim $image_dimensions --image_channels $image_channels > $debug_ImageProv/image_provider.txt &
 pid1=$!
 wait $pid1
 check_exit_statuses $?

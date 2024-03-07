@@ -10,6 +10,7 @@ add_executable(tensor_gt_mul_split tensor_gt_mul_split.cpp)
 add_executable(weight_share_receiver_genr weight_share_receiver_genr.cpp)
 add_executable(conv conv.cpp)
 add_executable(conv_split conv_split.cpp)
+add_executable(conv_h_split conv_h_split.cpp)
 add_executable(training training.cpp)
 add_executable(Image_Share_Receiver_CNN Image_Share_Receiver_CNN.cpp)
 add_executable(Weights_Share_Receiver_CNN Weights_Share_Receiver_CNN.cpp)
@@ -33,6 +34,7 @@ target_compile_features(constant_model_neural_network PRIVATE cxx_std_20)
 target_compile_features(training PRIVATE cxx_std_20)
 target_compile_features(conv PRIVATE cxx_std_20)
 target_compile_features(conv_split PRIVATE cxx_std_20)
+target_compile_features(conv_h_split PRIVATE cxx_std_20)
 
 
 
@@ -133,6 +135,14 @@ target_link_libraries(conv_split
     Boost::log
     Boost::program_options
 )
+
+target_link_libraries(conv_h_split
+    MOTION::motion
+    Boost::json
+    Boost::log
+    Boost::program_options
+)
+
 
 target_link_libraries(constant_model_neural_network 
     MOTION::motion
