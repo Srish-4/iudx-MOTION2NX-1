@@ -46,8 +46,6 @@ image_id=`echo $smpc_config | jq -r .image_id`
 
 image_dimensions=`echo $smpc_config | jq -r .image_rows`
 image_channels=`echo $smpc_config | jq -r .channels`
-echo "image dimensions : " $image_dimensions
-echo "image channels : " $image_channels
 
 # echo "cs0_host $cs0_host"
 # echo "cs1_host $cs1_host"
