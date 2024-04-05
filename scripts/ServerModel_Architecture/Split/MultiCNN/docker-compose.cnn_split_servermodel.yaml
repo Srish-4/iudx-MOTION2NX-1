@@ -28,16 +28,16 @@ services:
       - "4014:4014"
       # relu0_port_inference
       - "4012:4012"
-    mem_limit: 750m
-    cpus: 0.80
-    #mem_limit: 3300m
-    #cpus: 1.7
+    #mem_limit: 750m
+    #cpus: 0.80
+    mem_limit: 3300m
+    cpus: 1.7
     logging:
       driver: "json-file"
       options:
         max-file: "5"
         max-size: "10m"
-    command: bash -c "cd scripts/ServerModel_Architecture/Split/CNN && bash Hsplit_remote_server0_cifar.sh && while (true);  do  sleep 10; done"
+    command: bash -c "cd scripts/ServerModel_Architecture/Split/CNN && ./remote_server0_split_CNN.sh && while (true);  do  sleep 10; done"
 
   # SMPC server 1, model provider server
   smpc-server1:
@@ -61,16 +61,16 @@ services:
       - "4015:4015"
       # relu1_port_inference
       - "4013:4013"
-    mem_limit: 750m
-    cpus: 0.800
-    #mem_limit: 3300m
-    #cpus: 1.7
+    #mem_limit: 750m
+    #cpus: 0.800
+    mem_limit: 3300m
+    cpus: 1.7
     logging:
       driver: "json-file"
       options:
         max-file: "5"
         max-size: "10m"
-    command: bash -c "cd scripts/ServerModel_Architecture/Split/CNN && bash Hsplit_remote_server1_cifar.sh && while (true);  do  sleep 10; done"
+    command: bash -c "cd scripts/ServerModel_Architecture/Split/CNN && ./remote_server1_split_CNN.sh && while (true);  do  sleep 10; done"
 
 volumes:
   smpc-server1-volume:

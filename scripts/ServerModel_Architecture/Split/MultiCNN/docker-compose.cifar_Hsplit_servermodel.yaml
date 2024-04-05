@@ -37,7 +37,7 @@ services:
       options:
         max-file: "5"
         max-size: "10m"
-    command: bash -c "cd scripts/ServerModel_Architecture/Split/CNN && bash Hsplit_remote_server0_cifar.sh && while (true);  do  sleep 10; done"
+    command: bash -c "cd scripts/ServerModel_Architecture/Split/MultiCNN && bash MUL_Hsplit_remote_server0_cifar.sh && while (true);  do  sleep 10; done"
 
   # SMPC server 1, model provider server
   smpc-server1:
@@ -70,7 +70,7 @@ services:
       options:
         max-file: "5"
         max-size: "10m"
-    command: bash -c "cd scripts/ServerModel_Architecture/Split/CNN && bash Hsplit_remote_server1_cifar.sh && while (true);  do  sleep 10; done"
+    command: bash -c "cd scripts/ServerModel_Architecture/Split/MultiCNN && bash MUL_Hsplit_remote_server1_cifar.sh && while (true);  do  sleep 10; done"
 
 volumes:
   smpc-server1-volume:
