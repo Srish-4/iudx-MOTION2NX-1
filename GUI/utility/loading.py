@@ -1,10 +1,11 @@
 # SuperFastPython.com
+
 # example of a long-running daemon thread
 from time import sleep
 from random import random
 from threading import Thread
  
-
+from utility import File_location
 from tkinter import *
 from tkinter import ttk
 import time
@@ -31,6 +32,17 @@ def call(image):
     temp = True
 
     # long-running background task
+
+    def get_user_choice():
+      choice = input("""Enter the Option
+******************
+      1:NN
+      2:CNN
+****************** 
+Number Entered:""")
+      print(' ')
+      return choice
+
     def background_task():
         global videoplayer, temp
         while True:
@@ -41,7 +53,14 @@ def call(image):
                 base_dir = os.getenv("BASE_DIR")
                 f = open("output.txt", "w")
                 iter = subprocess.call("python3 " + base_dir + "/Dataprovider/image_provider/preprocess_image.py -f "+image, shell=True)
-                subprocess.call(base_dir + "/scripts/ServerModel_Architecture/HelperNode/ImageProvider_genr.sh", stdout=f)
+                #subprocess.call(base_dir + "/scripts/ServerModel_Architecture/Split/ImageProvider.sh", stdout=f)
+                user_choice = get_user_choice()
+                if user_choice == "1":
+                  subprocess.call(base_dir + "/scripts/ServerModel_Architecture/HelperNode/ImageProvider.sh", stdout=f)
+                elif user_choice == "2":
+                 subprocess.call(base_dir + "/scripts/ServerModel_Architecture/HelperNode/CNN/ImageProvider.sh", stdout=f)
+                else:
+                  print("Invalid choice.")
                 temp = False
                 time.sleep(1)
 

@@ -4,7 +4,11 @@ from PIL import ImageTk, Image
 from tkinter.filedialog import askopenfile
 from utility import SMPC
 from utility import NN
+from utility import CNN_layer
+from utility import CNN_helper
+from utility import NN_helper
 from utility import loading
+from utility import CNN_Split
 import subprocess
 import os
 
@@ -94,7 +98,7 @@ def call(fileLocation):
 
         def back(root):
             root.destroy()
-            NN.call()
+            CNN_layer.call()
 
 
 

@@ -84,5 +84,3 @@ def call(image):
 
 
 
-
-

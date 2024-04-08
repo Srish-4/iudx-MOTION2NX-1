@@ -9,6 +9,7 @@ from utility import two_layer
 from utility import five_layer
 from utility import CNN_layer
 from utility import CNN_helper
+from utility import NN_helper
 from utility import CNN_Split
 
 # window = Tk()
@@ -43,6 +44,8 @@ def call():
     canvas_2.grid(row = 0 , column=0, columnspan=4)
     canvas_2.option_add("*TCombobox*Listbox.font", "sans 20 bold")
     canvas_2.option_add("*TCombobox*Listbox.justify", "center")
+
+
     style = ttk.Style()
     style.theme_use("clam")
     style.configure('W.TCombobox', arrowsize = 25)
@@ -67,6 +70,9 @@ def call():
         elif choice == "Neural Network Inferencing":
             window.destroy()
             NN.call()
+        elif choice == "Neural Network Inferencing with helper node":
+            window.destroy()
+            NN_helper.call()
         elif choice == "Setup: Two Layer Neural Network":
             window.destroy()
             two_layer.call()
@@ -81,14 +87,15 @@ def call():
             CNN_helper.call()
         elif choice == "Convolution Neural Network Split":
             window.destroy()
-            CNN_helper.call()
+            CNN_Split.call()
+        
         
 
     clicked = StringVar()
     my_combo = ttk.Combobox(canvas_2, values=options,font=('sans 20 bold'), justify=CENTER, textvariable=clicked, style='W.TCombobox', state = "readonly")
     my_combo.grid(row = 0 , column=0, columnspan=4, ipadx=300,ipady=10, padx=10, pady=10)
     # my_combo.config(dropdown_font = ('Times 20 bold'))
-    my_combo.set( "Neural Network Inferencing with helper node" )
+    my_combo.set( "Convolution Neural Network with helper node" )
     my_combo.bind("<<ComboboxSelected>>", display_selected)
     
 
@@ -104,7 +111,8 @@ def call():
     canvas.grid(row = 1 , column=1,columnspan=3)
 
 
-    details_smpc = "Neural Network Inferencing\n\n   In this context there are only 2 data providers, \n   image provider and model provider. \n\n   Image provider is the output owner, i.e., output \n   shares are received only by the image provider\n\nHow is helper node different: \n\n   • Helper node interacts only with the \n   compute servers.\n\n   • Helper node helps the compute servers \n   in the implementation of a secure matrix \n   multiplication function."
+
+    details_smpc = " Convolution Neural Network Inferencing\n\n   In this context there are only 2 data providers, \n   image provider and model provider. \n\n   Image provider is the output owner, i.e., output \n   shares are received only by the image provider\n\nHow is helper node different: \n\n   • Helper node interacts only with the \n   compute servers.\n\n   • Helper node helps the compute servers \n   in the implementation of a secure matrix \n   multiplication function."
     canvas.create_text(700/2, 512/2,anchor= CENTER, text=details_smpc, fill="black", font=('sans 18 normal'))
 
 
@@ -421,6 +429,9 @@ def call():
 
     window.resizable(False , False)
     window.mainloop()
+
+
+
 
 
 
