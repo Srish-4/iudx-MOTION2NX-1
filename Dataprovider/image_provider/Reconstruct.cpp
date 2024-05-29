@@ -105,12 +105,10 @@ int main(int argc, char* argv[]) {
     // while (final_answer[i] != 0) {
     //   i++;
     // }
-    std::cout << "\nThe image shared is detected as"
-              << ":" << y << "\n";
+    std::cout << "\nThe image shared is detected as" << ":" << y << "\n";
   } catch (std::runtime_error& e) {
     std::cerr << "ERROR OCCURRED: " << e.what() << "\n";
-    std::cerr << "ERROR Caught !!"
-              << "\n";
+    std::cerr << "ERROR Caught !!" << "\n";
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;

@@ -8,6 +8,7 @@ add_executable(training_neuralnet_clear training_neuralnet_clear.cpp)
 add_executable(training_neuralnet_smpc training_neuralnet_smpc.cpp)
 add_executable(machine_learning_1l_smpc machine_learning_1l_smpc.cpp)
 add_executable(cnn cnn.cpp)
+add_executable(test_maxpool_op test_maxpool_op.cpp)
 
 
 find_package(Boost COMPONENTS json log program_options REQUIRED)
@@ -22,6 +23,7 @@ target_compile_features(training_neuralnet_clear PRIVATE cxx_std_20)
 target_compile_features(training_neuralnet_smpc PRIVATE cxx_std_20)
 target_compile_features(machine_learning_1l_smpc PRIVATE cxx_std_20)
 target_compile_features(cnn PRIVATE cxx_std_20)
+target_compile_features(test_maxpool_op PRIVATE cxx_std_20)
 
 
 target_link_libraries(readfile
@@ -95,6 +97,11 @@ target_link_libraries(cnn
     Boost::program_options
 )
 
-
+target_link_libraries(test_maxpool_op
+    MOTION::motion
+    Boost::json
+    Boost::log
+    Boost::program_options
+)
 
 

@@ -9,7 +9,7 @@ check_exit_statuses() {
    done
 }
 # paths required to run cpp files
-image_config=${BASE_DIR}/config_files/file_config_input_remote
+image_config="remote_image_shares"
 build_path=${BASE_DIR}/build_debwithrelinfo_gcc
 image_provider_path=${BASE_DIR}/data/ImageProvider/Final_Output_Shares
 debug_0=${BASE_DIR}/logs/server0/

@@ -11,7 +11,7 @@ check_exit_statuses() {
    done
 }
 # paths required to run cpp files
-image_config=${BASE_DIR}/config_files/file_config_input_remote
+image_config="remote_image_shares"
 build_path=${BASE_DIR}/build_debwithrelinfo_gcc
 image_path=${BASE_DIR}/data/ImageProvider
 image_provider_path=${BASE_DIR}/data/ImageProvider/Final_Output_Shares
@@ -246,7 +246,7 @@ for ((layer_id=1; layer_id<=$number_of_layers; layer_id++)); do
       pid1=$!
       wait $pid1
       check_exit_statuses $?
-      echo "Layer $layer_id: Convolution is done"
+      echo "Layer $layer_id: Convolution is done"      
 
       $build_path/bin/tensor_gt_relu --my-id 0 --party 0,$cs0_host,$relu0_port_inference --party 1,$cs1_host,$relu1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --filepath file_config_input0 --current-path $build_path > $debug_0/tensor_gt_relu0_layer${layer_id}.txt &
       pid1=$!
@@ -254,6 +254,8 @@ for ((layer_id=1; layer_id<=$number_of_layers; layer_id++)); do
       check_exit_statuses $?
       echo "Layer $layer_id: ReLU is done"
       tail -n +2 server0/outputshare_0 >> server0/cnn_outputshare_0
+
+
 
    elif [ ${layer_types[layer_id]} -eq 1 ] && [ $num_splits -gt 1 ]; 
    then
@@ -411,7 +413,7 @@ for ((layer_id=1; layer_id<=$number_of_layers; layer_id++)); do
                wait $pid1
                check_exit_statuses $? 
                echo "Layer $layer_id, kernel $m , Horizontal_split $((k)) : Convolution is done."
-
+               
                $build_path/bin/tensor_gt_relu --my-id 0 --party 0,$cs0_host,$relu0_port_inference --party 1,$cs1_host,$relu1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --filepath file_config_input0 --current-path $build_path > $debug_0/tensor_gt_relu0_layer${layer_id}.txt &
                pid1=$!
                wait $pid1
@@ -419,6 +421,7 @@ for ((layer_id=1; layer_id<=$number_of_layers; layer_id++)); do
                echo "Layer $layer_id, kernel $m , Horizontal Split: $((k)) : ReLU is done"
                tail -n +2 server0/outputshare_0 >> server0/final_outputshare_0
                tail -n +2 server0/outputshare_0 >> server0/cnn_outputshare_0
+               
 
             done
         
@@ -426,22 +429,6 @@ for ((layer_id=1; layer_id<=$number_of_layers; layer_id++)); do
          cp server0/final_outputshare_0  server0/outputshare_0 
 
       done
-
-      # cp server0/final_outputshare_0  server0/outputshare_0 
-      # if [ -f server0/final_outputshare_0 ]; then
-      #    rm server0/final_outputshare_0
-      # fi
-      # if [ -f server0/split_input_0 ]; then
-      #    rm server0/split_input_0
-      # fi
-      # check_exit_statuses $?
-
-      # $build_path/bin/tensor_gt_relu --my-id 0 --party 0,$cs0_host,$relu0_port_inference --party 1,$cs1_host,$relu1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --filepath file_config_input0 --current-path $build_path > $debug_0/tensor_gt_relu0_layer${layer_id}.txt &
-      # pid1=$!
-      # wait $pid1
-      # check_exit_statuses $?
-      # echo "Layer $layer_id: ReLU is done"
-      # tail -n +2 server0/outputshare_0 >> server0/cnn_outputshare_0
    fi
    ((split_info_index++))
 done

@@ -239,18 +239,18 @@ std::vector<std::uint64_t> convolution(std::vector<std::uint64_t> input, std::ve
        std::cout<<"image_rows: "<<image_rows<<"\n";
        std::cout<<"image_cols: "<<image_cols<<"\n";
 
-        for(int i=0;i<input.size();i++)
-       {
-        std::cout<<input[i]<<" ";
-       }
-        std::cout<<"***************\n";
+      //   for(int i=0;i<input.size();i++)
+      //  {
+      //   std::cout<<input[i]<<" ";
+      //  }
+      //   std::cout<<"***************\n";
 
-       for(int i=0;i<weights.size();i++)
-       {
-        std::cout<<weights[i]<<" ";
-       }
-        std::cout<<"\n";
-        std::cout<<"***************\n";
+      //  for(int i=0;i<weights.size();i++)
+      //  {
+      //   std::cout<<weights[i]<<" ";
+      //  }
+      //   std::cout<<"\n";
+      //   std::cout<<"***************\n";
 
        
 
@@ -347,12 +347,12 @@ void operations()
     // prod1=multiplicate(wpublic,xpublic);
       prod1=convolution(xpublic,wpublic,conv_kernels,image_channels,conv_rows,conv_cols,pads,strides,image_rows,image_cols);
       
-    std::cout<<"prod1 : "<<"\n";
-    for(int i=0;i<prod1.size();i++)
-     {
-       std::cout<<prod1[i]<<" ";
-     }  
-     std::cout<<"\n";
+    // std::cout<<"prod1 : "<<"\n";
+    // for(int i=0;i<prod1.size();i++)
+    //  {
+    //    std::cout<<prod1[i]<<" ";
+    //  }  
+    //  std::cout<<"\n";
 
   //------------------------------------------------------------------------------------------------------------------
      
@@ -360,12 +360,12 @@ void operations()
     //std::vector<std::uint64_t>prod2= multiplicate(w2,xsecret);
     std::vector<std::uint64_t>prod2=convolution(xsecret,w2,conv_kernels,image_channels,conv_rows,conv_cols,pads,strides,image_rows,image_cols);
     
-        std::cout<<"prod2 : "<<"\n";
-    for(int i=0;i<prod2.size();i++)
-     {
-       std::cout<<prod2[i]<<" ";
-     }  
-     std::cout<<"\n";
+    //     std::cout<<"prod2 : "<<"\n";
+    // for(int i=0;i<prod2.size();i++)
+    //  {
+    //    std::cout<<prod2[i]<<" ";
+    //  }  
+    //  std::cout<<"\n";
 
 //--------------------------------------------------------------------------------------------------------
 
@@ -373,12 +373,12 @@ void operations()
     //std::vector<std::uint64_t>prod3= multiplicate(wsecret,xpublic);
     std::vector<std::uint64_t>prod3=convolution(xpublic,wsecret,conv_kernels,image_channels,conv_rows,conv_cols,pads,strides,image_rows,image_cols);
     
-     std::cout<<"prod3 : "<<"\n";
-    for(int i=0;i<prod3.size();i++)
-     {
-       std::cout<<prod3[i]<<" ";
-     }  
-     std::cout<<"\n";
+    //  std::cout<<"prod3 : "<<"\n";
+    // for(int i=0;i<prod3.size();i++)
+    //  {
+    //    std::cout<<prod3[i]<<" ";
+    //  }  
+    //  std::cout<<"\n";
 
 //--------------------------------------------------------------------------------------------------------------
     //output(prod1)=prod1-prod2-prod3
@@ -386,12 +386,12 @@ void operations()
     __gnu_parallel::transform(prod1.begin(), prod1.end(), prod3.begin(), prod1.begin() , std::minus{});
 //-------------------------------------------------------------------------------------------------------------
 
-        std::cout<<"prod1 before adding R : "<<"\n";
-    for(int i=0;i<prod1.size();i++)
-     {
-       std::cout<<prod1[i]<<" ";
-     }  
-     std::cout<<"\n"; 
+    //     std::cout<<"prod1 before adding R : "<<"\n";
+    // for(int i=0;i<prod1.size();i++)
+    //  {
+    //    std::cout<<prod1[i]<<" ";
+    //  }  
+    //  std::cout<<"\n"; 
 
  
   //  //output=Delx*Dely-Delx*dely-Dely*delx+R (R was received from s2) 
@@ -425,12 +425,12 @@ void operations()
     //output=output+random(local secret share)
     __gnu_parallel::transform(prod1.begin(), prod1.end(), randomnum.begin(), prod1.begin() , std::plus{});   
     
-    std::cout<<"prod1 after adding secret share 0 : "<<"\n";
-    for(int i=0;i<prod1.size();i++)
-     {
-       std::cout<<prod1[i]<<" ";
-     }  
-     std::cout<<"\n";
+    // std::cout<<"prod1 after adding secret share 0 : "<<"\n";
+    // for(int i=0;i<prod1.size();i++)
+    //  {
+    //    std::cout<<prod1[i]<<" ";
+    //  }  
+    //  std::cout<<"\n";
     operations_done_flag++;
 }
 
@@ -472,11 +472,11 @@ class TestMessageHandler : public MOTION::Communication::MessageHandler {
       std::cout<<"R message : \n";
       for (auto i = 3; i < k; ++i) {
         auto temp = getuint64(message, i);
-        std::cout<<temp<<" ";
+        // std::cout<<temp<<" ";
         R.push_back(temp);
       }
-      std::cout<<"\n";
-      std::cout<<"k="<<k<<"   R.size()="<<R.size()<<std::endl;
+      // std::cout<<"\n";
+      // std::cout<<"k="<<k<<"   R.size()="<<R.size()<<std::endl;
       if (R.size() == k-3) {
         std::cout<<"Before operations\n";
         operations();

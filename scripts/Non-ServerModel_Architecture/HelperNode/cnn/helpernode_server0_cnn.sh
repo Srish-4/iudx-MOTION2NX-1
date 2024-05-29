@@ -9,7 +9,7 @@ check_exit_statuses() {
    done
 }
 # paths required to run cpp files
-image_config=${BASE_DIR}/config_files/file_config_input_remote
+image_config="remote_image_shares"
 model_config=${BASE_DIR}/config_files/model_helpernode_config.json
 build_path=${BASE_DIR}/build_debwithrelinfo_gcc
 image_path=${BASE_DIR}/data/ImageProvider
@@ -69,6 +69,8 @@ fractional_bits=`echo $smpc_config | jq -r .fractional_bits`
 # Index of the image for which inferencing task is run
 image_id=`echo $smpc_config | jq -r .image_id`
 
+image_dimensions=`echo $smpc_config | jq -r .image_rows`
+image_channels=`echo $smpc_config | jq -r .channels`
 
 # echo all input variables
 #echo "cs0_host $cs0_host"
@@ -138,7 +140,7 @@ pid1=$!
 
 #########################Image Share Provider ############################################################################################
 echo "Image Provider starts"
-$build_path/bin/image_provider_CNN --compute-server0-ip $cs0_host --compute-server0-port $cs0_port_image_receiver --compute-server1-ip $cs1_host --compute-server1-port $cs1_port_image_receiver --fractional-bits $fractional_bits --index $image_id --filepath $image_path > $debug_0/image_provider.txt &
+$build_path/bin/image_provider_CNN --compute-server0-ip $cs0_host --compute-server0-port $cs0_port_image_receiver --compute-server1-ip $cs1_host --compute-server1-port $cs1_port_image_receiver --fractional-bits $fractional_bits --index $image_id --filepath $image_path --image_dim $image_dimensions --image_channels $image_channels > $debug_0/image_provider.txt &
 pid3=$!
 
 wait $pid3 $pid1

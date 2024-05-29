@@ -10,7 +10,7 @@ check_exit_statuses() {
       fi
    done
 }
-image_config=${BASE_DIR}/config_files/file_config_input_remote
+image_config="remote_image_shares"
 build_path=${BASE_DIR}/build_debwithrelinfo_gcc
 model_provider_path=${BASE_DIR}/data/ModelProvider
 debug_1=${BASE_DIR}/logs/server1
@@ -423,32 +423,8 @@ for ((layer_id=1; layer_id<=$number_of_layers; layer_id++)); do
          echo "Layer $layer_id, kernel $m: Convolution is done."
          cp server1/final_outputshare_1  server1/outputshare_1 
 
-         #  cp server1/final_outputshare_1  server1/outputshare_1 
-         # if [ -f server1/final_outputshare_1 ]; then
-         #    rm server1/final_outputshare_1
-         # fi
-         # if [ -f server1/split_input_1 ]; then
-         #    rm server1/split_input_1
-         # fi
-         # check_exit_statuses $?
-
       done
 
-      # cp server1/final_outputshare_1  server1/outputshare_1 
-      # if [ -f server1/final_outputshare_1 ]; then
-      #    rm server1/final_outputshare_1
-      # fi
-      # if [ -f server1/split_input_1 ]; then
-      #    rm server1/split_input_1
-      # fi
-      # check_exit_statuses $?
-
-      # $build_path/bin/tensor_gt_relu --my-id 1 --party 0,$cs0_host,$relu0_port_inference --party 1,$cs1_host,$relu1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --filepath file_config_input1 --current-path $build_path > $debug_1/tensor_gt_relu1_layer${layer_id}.txt &
-      # pid1=$!
-      # wait $pid1
-      # check_exit_statuses $?
-      # echo "Layer $layer_id: ReLU is done"
-      # tail -n +2 server1/outputshare_1 >> server1/cnn_outputshare_1
    fi
    ((split_info_index++))
 done

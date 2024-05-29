@@ -230,18 +230,18 @@ std::vector<std::uint64_t> convolution(std::vector<std::uint64_t> input, std::ve
        std::cout<<"image_rows: "<<image_rows<<"\n";
        std::cout<<"image_cols: "<<image_cols<<"\n";
 
-        for(int i=0;i<input.size();i++)
-       {
-        std::cout<<input[i]<<" ";
-       }
-        std::cout<<"***************\n";
+      //   for(int i=0;i<input.size();i++)
+      //  {
+      //   std::cout<<input[i]<<" ";
+      //  }
+      //   std::cout<<"***************\n";
 
-       for(int i=0;i<weights.size();i++)
-       {
-        std::cout<<weights[i]<<" ";
-       }
-        std::cout<<"\n";
-        std::cout<<"***************\n";
+      //  for(int i=0;i<weights.size();i++)
+      //  {
+      //   std::cout<<weights[i]<<" ";
+      //  }
+      //   std::cout<<"\n";
+      //   std::cout<<"***************\n";
 
        
 
@@ -312,7 +312,7 @@ std::vector<std::uint64_t> convolution(std::vector<std::uint64_t> input, std::ve
     for (int i = 0; i < output_rows * output_columns; i++) {
       output[j] = (MOTION::matrix_multiply(1, kernel_segments[k].size(), 1, kernel_segments[k],
                                            image_segments[i]))[0];
-      std::cout << output[j] << " ";
+      // std::cout << output[j] << " ";
       j++;
     }
     std::cout << "\n";
@@ -332,12 +332,12 @@ void operations()
     //std::vector<std::uint64_t>prod1=multiplicate(wpublic,xsecret);
     prod1=convolution(xsecret,wpublic,conv_kernels,image_channels,conv_rows,conv_cols,pads,strides,image_rows,image_cols);
     
-    std::cout<<"prod1 : "<<"\n";
-    for(int i=0;i<prod1.size();i++)
-     {
-       std::cout<<prod1[i]<<" ";
-     }  
-     std::cout<<"\n";
+    // std::cout<<"prod1 : "<<"\n";
+    // for(int i=0;i<prod1.size();i++)
+    //  {
+    //    std::cout<<prod1[i]<<" ";
+    //  }  
+    //  std::cout<<"\n";
 
   //----------------------------------------------------------------------------------------------------------
 
@@ -345,12 +345,12 @@ void operations()
     //std::vector<std::uint64_t>prod2=multiplicate(wsecret,xpublic);
     std::vector<std::uint64_t>prod2=convolution(xpublic,wsecret,conv_kernels,image_channels,conv_rows,conv_cols,pads,strides,image_rows,image_cols);
     
-    std::cout<<"prod2 : "<<"\n";
-    for(int i=0;i<prod2.size();i++)
-     {
-       std::cout<<prod2[i]<<" ";
-     }  
-     std::cout<<"\n";
+    // std::cout<<"prod2 : "<<"\n";
+    // for(int i=0;i<prod2.size();i++)
+    //  {
+    //    std::cout<<prod2[i]<<" ";
+    //  }  
+    //  std::cout<<"\n";
 
 
 //---------------------------------------------------------------------------------------------------------------------------
@@ -431,10 +431,10 @@ class TestMessageHandler : public MOTION::Communication::MessageHandler {
       std::cout<<"Z message : \n";
     for (auto i = 3; i < k; ++i) {
       auto temp = getuint64(message, i);
-      std::cout<<temp<<" ";
+      // std::cout<<temp<<" ";
       Z.push_back(temp);
     }
-    std::cout<<"\n";
+    // std::cout<<"\n";
     if (Z.size() == k-3) {
       operations();
       operations_done_flag++;

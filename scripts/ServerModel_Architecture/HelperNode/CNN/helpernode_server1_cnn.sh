@@ -8,7 +8,7 @@ check_exit_statuses() {
       fi
    done
 }
-image_config=${BASE_DIR}/config_files/file_config_input_remote
+image_config="remote_image_shares"
 model_config=${BASE_DIR}/config_files/model_helpernode_config.json
 build_path=${BASE_DIR}/build_debwithrelinfo_gcc
 debug_1=${BASE_DIR}/logs/server1/

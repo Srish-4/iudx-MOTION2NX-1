@@ -1,4 +1,11 @@
 #!/bin/bash
+
+# image_index=7
+# while :
+# do
+
+# echo 
+# echo "image index: " $image_index
 check_exit_statuses() {
    for status in "$@";
    do
@@ -100,3 +107,9 @@ pid1=$!
 wait $pid1
 check_exit_statuses $?
 wait
+
+# image_index=$((image_index + 1))
+
+#done
+
+

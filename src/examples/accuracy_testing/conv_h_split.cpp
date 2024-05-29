@@ -509,7 +509,7 @@ int B_shares(Options* options, std::string p) {
     }
   }
   indata.close();
-  std::cout << "496\n B completed\n";
+  std::cout << "B completed\n";
 }
 
 // changes made in this function

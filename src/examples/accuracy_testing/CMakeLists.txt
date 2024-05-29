@@ -15,6 +15,8 @@ add_executable(training training.cpp)
 add_executable(Image_Share_Receiver_CNN Image_Share_Receiver_CNN.cpp)
 add_executable(Weights_Share_Receiver_CNN Weights_Share_Receiver_CNN.cpp)
 add_executable(constant_model_neural_network constant_model_neural_network.cpp)
+add_executable(tensor_maxpool tensor_maxpool.cpp)
+add_executable(test_tensor_maxpool test_tensor_maxpool.cpp)
 
 find_package(Boost COMPONENTS json log program_options REQUIRED)
 
@@ -35,8 +37,8 @@ target_compile_features(training PRIVATE cxx_std_20)
 target_compile_features(conv PRIVATE cxx_std_20)
 target_compile_features(conv_split PRIVATE cxx_std_20)
 target_compile_features(conv_h_split PRIVATE cxx_std_20)
-
-
+target_compile_features(tensor_maxpool PRIVATE cxx_std_20)
+target_compile_features(test_tensor_maxpool PRIVATE cxx_std_20)
 
 target_link_libraries(tensor_gt_relu
     MOTION::motion
@@ -137,6 +139,21 @@ target_link_libraries(conv_split
 )
 
 target_link_libraries(conv_h_split
+    MOTION::motion
+    Boost::json
+    Boost::log
+    Boost::program_options
+)
+
+
+target_link_libraries(tensor_maxpool
+    MOTION::motion
+    Boost::json
+    Boost::log
+    Boost::program_options
+)
+
+target_link_libraries(test_tensor_maxpool
     MOTION::motion
     Boost::json
     Boost::log

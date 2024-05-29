@@ -21,5 +21,7 @@
     "number_of_layers": 5,
     "fractional_bits": 13,
     "image_id": 2,
+    "image_rows": 28,
+    "channels": 1,
     "layer_types": [1,1,1,1,0,0]
 }

@@ -10,7 +10,7 @@ check_exit_statuses() {
       fi
    done
 }
-image_config=${BASE_DIR}/config_files/file_config_input_remote
+image_config="remote_image_shares"
 build_path=${BASE_DIR}/build_debwithrelinfo_gcc
 model_provider_path=${BASE_DIR}/data/ModelProvider
 debug_1=${BASE_DIR}/logs/server1
