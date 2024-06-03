@@ -10,8 +10,9 @@ from utility import two_layer
 from utility import CNN_layer
 from utility import CNN_helper
 from utility import CNN_Split
-
-
+from utility import four_layer
+from utility import five_layer
+from utility import Six_layer
 # window = Tk()
 
 
@@ -43,9 +44,11 @@ def call():
         "Neural Network Inferencing with helper node",
         "Setup: Two Layer Neural Network",
         "Setup: Five Layer Neural Network",
-        "Convolution Neural Network",
+       # "Convolution Neural Network",
         "Convolution Neural Network Inferencing with helper node",
-        "Convolution Neural Network Split"
+        "Convolution Neural Network Split",
+        "Setup: Four Layer Convolution Network",
+         "Setup: Six Layer Convolution Network"
     ]
 
 
@@ -63,15 +66,22 @@ def call():
         elif choice == "Setup: Two Layer Neural Network":
             window.destroy()
             two_layer.call()
-        elif choice == "Convolution Neural Network":
-            window.destroy()
-            CNN_layer.call()
+       # elif choice == "Convolution Neural Network":
+        #    window.destroy()
+         #   CNN_layer.call()
         elif choice ==  "Convolution Neural Network Inferencing with helper node":
             window.destroy()
             CNN_helper.call()
         elif choice == "Convolution Neural Network Split":
             window.destroy()
             CNN_Split.call()
+        elif choice=="Setup: Four Layer Convolution Network":
+            window.destroy()
+            four_layer.call()
+        elif choice == "Setup: Six Layer Convolution Network":
+            window.destroy()
+            Six_layer.call()
+        
         
         
 

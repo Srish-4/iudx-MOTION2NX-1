@@ -1,4 +1,3 @@
-
 from tkinter import *
 from tkinter import ttk
 from utility import paint 
@@ -11,6 +10,8 @@ from utility import five_layer
 from utility import CNN_layer
 from utility import CNN_helper
 from utility import CNN_Split
+from utility import four_layer
+from utility import Six_layer
 
 def call():
 
@@ -42,9 +43,11 @@ def call():
         "Neural Network Inferencing with helper node",
         "Setup: Two Layer Neural Network",
         "Setup: Five Layer Neural Network",
-        "Convolution Neural Network",
+      #  "Convolution Neural Network",
         "Convolution Neural Network Inferencing with helper node",
-        "Convolution Neural Network Split"
+        "Convolution Neural Network Split",
+        "Setup: Four Layer Convolution Network",
+        "Setup: Six Layer Convolution Network"
     ]
 
 
@@ -62,17 +65,22 @@ def call():
         elif choice == "Setup: Five Layer Neural Network":
             window.destroy()
             five_layer.call()
-        elif choice == "Convolution Neural Network":
-            window.destroy()
-            CNN_layer.call()
+       # elif choice == "Convolution Neural Network":
+        #    window.destroy()
+         #   CNN_layer.call()
         elif choice == "Convolution Neural Network Inferencing with helper node":
             window.destroy()
             CNN_helper.call()
         elif choice == "Convolution Neural Network Split":
             window.destroy()
             CNN_Split.call()
-        
-
+        elif choice=="Setup: Four Layer Convolution Network":
+            window.destroy()
+            four_layer.call()
+        elif choice == "Setup: Six Layer Convolution Network":
+            window.destroy()
+            Six_layer.call()
+            
     clicked = StringVar()
     my_combo = ttk.Combobox(canvas_2, values=options,font=('sans 20 bold'), justify=CENTER, textvariable=clicked, style='W.TCombobox', state = "readonly")
     my_combo.grid(row = 0 , column=0, columnspan=4, ipadx=300,ipady=10, padx=10, pady=10)

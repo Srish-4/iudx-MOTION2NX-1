@@ -126,7 +126,6 @@ def main():
         return -1
     
     process_img(args.File_Name)
-    print("hello1")
     return 1
      
 

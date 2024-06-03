@@ -11,7 +11,11 @@ from utility import loading
 from utility import CNN_Split
 import subprocess
 import os
-
+#global number
+#def call2(number):
+ # loading.get_user_choice(number)
+  #return
+  
 
 def call(fileLocation):
 
@@ -41,6 +45,46 @@ def call(fileLocation):
 
 
         def openFile(path):
+          try:
+                global myLabel
+                img = Image.open(path)
+                img = img.resize((500, 500))  # Adjust the size of the displayed image as needed
+                photo_img = ImageTk.PhotoImage(img)
+                if myLabel:
+                     myLabel.destroy()
+                     myLabel = Label(root, image=photo_img)
+                     myLabel.grid(row=2, column=0, columnspan=2)
+                else:
+                    myLabel = Label(root, image=photo_img)
+                    myLabel.grid(row=2, column=0, columnspan=2)
+                myLabel.image = photo_img
+                myLabel['image'] = photo_img
+
+                b2 = Button(root)  # You can keep the button as it was
+        # Add any configurations for the button here
+          except Exception as e:
+                root.destroy()
+                call(fileLocation)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             # my_img_1 = ImageTk.PhotoImage(Image.open("download.png"))
             # print(my_img_1)
             # # myLabel = Label(image=my_img)
@@ -49,21 +93,22 @@ def call(fileLocation):
             # canvas.grid(row=2,column=0, columnspan=2, padx=5,pady=5)
             # img = ImageTk.PhotoImage(Image.open("/home/daksh1115/Desktop/IUDX/Tkinter/Learning/Project 1/Daksh.jpg"))  
             # canvas.create_image(20, 20, anchor=NW, image=img) 
-            try:
-                global myLabel
-                img = ImageTk.PhotoImage(file=path)
-                b2 =Button(root) # using Button 
+            #try:
+             #   global myLabel
+              #  img=Image.open(file=path)
+               # img = ImageTk.PhotoImage(file=path)
+               # b2 =Button(root) # using Button 
                 
-                myLabel.destroy()
-                myLabel = Label()
-                myLabel.grid(row=2,column=0,columnspan=2)
+               # myLabel.destroy()
+               # myLabel = Label()
+               # myLabel.grid(row=2,column=0,columnspan=2)
                 
-                myLabel.image = img
-                myLabel['image'] = img
-            except:
+               # myLabel.image = img
+               # myLabel['image'] = img
+            #except:
                 # print(e)
-                root.destroy()
-                call(fileLocation)
+             #   root.destroy()
+              #  call(fileLocation)
 
             
 
@@ -98,7 +143,7 @@ def call(fileLocation):
 
         def back(root):
             root.destroy()
-            CNN_layer.call()
+            CNN_helper.call()
 
 
 

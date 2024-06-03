@@ -11,6 +11,11 @@ from utility import CNN_layer
 from utility import CNN_helper
 from utility import NN_helper
 from utility import CNN_Split
+from utility import loading
+from utility import four_layer
+from utility import result_Cifar10
+from utility import result_mnist
+from utility import Six_layer
 
 # window = Tk()
 
@@ -56,9 +61,11 @@ def call():
         "Neural Network Inferencing with helper node",
         "Setup: Two Layer Neural Network",
         "Setup: Five Layer Neural Network",
-        "Convolution Neural Network",
+      #  "Convolution Neural Network",
         "Convolution Neural Network Inferencing with helper node",
-        "Convolution Neural Network Split"
+        "Convolution Neural Network Split",
+        "Setup: Four Layer Convolution Network",
+         "Setup: Six Layer Convolution Network"
     ]
 
 
@@ -79,15 +86,21 @@ def call():
         elif choice == "Setup: Five Layer Neural Network":
             window.destroy()
             five_layer.call()
-        elif choice == "Convolution Neural Network":
-            window.destroy()
-            CNN_layer.call()
+        #elif choice == "Convolution Neural Network":
+         #   window.destroy()
+          #  CNN_layer.call()
         elif choice == "Convolution Neural Network Inferencing with helper node":
             window.destroy()
             CNN_helper.call()
         elif choice == "Convolution Neural Network Split":
             window.destroy()
             CNN_Split.call()
+        elif choice=="Setup: Four Layer Convolution Network":
+            window.destroy()
+            four_layer.call()
+        elif choice == "Setup: Six Layer Convolution Network":
+            window.destroy()
+            Six_layer.call()
         
         
 
@@ -396,9 +409,9 @@ def call():
             time.sleep(0.01)
 
 
-    client_button = Button(window, text="Client", padx=40,pady=10, command=client,highlightthickness=3, highlightbackground="black", font=('Times 20 bold'))
-    server_button = Button(window, text="Server", padx=40,pady=10, command=server,highlightthickness=3, highlightbackground="black", font=('Times 20 bold'))
-    output_button = Button(window, text="Output", padx=40,pady=10, command=result,highlightthickness=3, highlightbackground="black", font=('Times 20 bold'))
+    client_button = Button(window, text="Client", padx=55,pady=10, command=client,highlightthickness=3, highlightbackground="black", font=('Times 20 bold'))
+    server_button = Button(window, text="Server", padx=45,pady=10, command=server,highlightthickness=3, highlightbackground="black", font=('Times 20 bold'))
+    output_button = Button(window, text="Output", padx=20,pady=10, command=result,highlightthickness=3, highlightbackground="black", font=('Times 20 bold'))
 
 
     client_button.grid(row=2,column=1,ipadx=5)
@@ -407,22 +420,30 @@ def call():
 
     def painter(root):
         root.destroy()
+        loading.get_user_choice(2)
+        loading.choose_dataset(1)
         paint.call()
 
     def Uploader(root):
         root.destroy()
+        loading.get_user_choice(2)
+        loading.choose_dataset(1)
         File_location.call("")
+    def cifar10(root):
+      root.destroy()
+      CNN_layer.call()
+      
 
-    paint_button = Button(window, text="Draw your Number", padx=80,pady=10, command=lambda: painter(window),highlightthickness=3, highlightbackground="black", font=('Times 20 bold'))
-    upload_button = Button(window, text="Upload your Image", padx=80,pady=10, command=lambda: Uploader(window),highlightthickness=3, highlightbackground="black", font=('Times 20 bold'))
+    paint_button = Button(window, text="Draw your Number", padx=15,pady=10, command=lambda: painter(window),highlightthickness=3, highlightbackground="black", font=('Times 20 bold'))
+    upload_button = Button(window, text="MNIST", padx=45,pady=10, command=lambda: Uploader(window),highlightthickness=3, highlightbackground="black", font=('Times 20 bold'))
     
+    cifar_button = Button(window, text="CIFAR 10", padx=45,pady=10, command=lambda: cifar10(window),highlightthickness=3, highlightbackground="black", font=('Times 20 bold'))
 
 
 
-
-    paint_button.grid(row=3,column=0,ipadx=5, pady=20)
-    upload_button.grid(row=3,column=1,ipadx=5, columnspan=3, pady=20)
-
+    paint_button.grid(row=3,column=0,padx=15, pady=20)
+    upload_button.grid(row=3,column=1,padx=15,pady=20)
+    cifar_button.grid(row=3,column=2,padx=15,pady=20)
 
 
 

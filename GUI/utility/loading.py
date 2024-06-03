@@ -1,6 +1,3 @@
-# SuperFastPython.com
-
-# example of a long-running daemon thread
 from time import sleep
 from random import random
 from threading import Thread
@@ -11,9 +8,23 @@ from tkinter import ttk
 import time
 from tkinter import *
 from tkVideoPlayer import TkinterVideo
-from utility import result
+from utility import result_Cifar10
+from utility import result_mnist
 import subprocess
 import os
+global options
+global option
+def choose_dataset(value):
+  #print("$$$ I entered into user choice $$$$")
+  global options
+  options=value
+  #print("loading.py 20 option value set to :", option)
+
+def get_user_choice(value):
+  #print("$$$ I entered into user choice $$$$")
+  global option
+  option=value
+  #print("loading.py 20 option value set to :", option)
 
 def call(image):
     # image = "Daksh.jpg"
@@ -33,18 +44,11 @@ def call(image):
 
     # long-running background task
 
-    def get_user_choice():
-      choice = input("""Enter the Option
-******************
-      1:NN
-      2:CNN
-****************** 
-Number Entered:""")
-      print(' ')
-      return choice
 
     def background_task():
-        global videoplayer, temp
+    	
+        global videoplayer,temp,option
+        #print("in loading.py 44 Value of option:",option)
         while True:
             if (not temp):
                 break
@@ -52,12 +56,17 @@ Number Entered:""")
             else:
                 base_dir = os.getenv("BASE_DIR")
                 f = open("output.txt", "w")
-                iter = subprocess.call("python3 " + base_dir + "/Dataprovider/image_provider/preprocess_image.py -f "+image, shell=True)
+                if options == 1:
+                  iter = subprocess.call("python3 " + base_dir + "/Dataprovider/image_provider/MNIST_preprocess_image.py -f "+image, shell=True)
                 #subprocess.call(base_dir + "/scripts/ServerModel_Architecture/Split/ImageProvider.sh", stdout=f)
-                user_choice = get_user_choice()
-                if user_choice == "1":
+                elif options ==2:
+                  iter = subprocess.call("python3 " + base_dir + "/Dataprovider/image_provider/cifar_preprocess_image.py -f "+image, shell=True)
+                if option == 1:
+                  #print(" option 1 is executed")
                   subprocess.call(base_dir + "/scripts/ServerModel_Architecture/HelperNode/ImageProvider.sh", stdout=f)
-                elif user_choice == "2":
+                elif option == 2:
+                 #print(" option 2 is executed")
+                 #print("**************************************")
                  subprocess.call(base_dir + "/scripts/ServerModel_Architecture/HelperNode/CNN/ImageProvider.sh", stdout=f)
                 else:
                   print("Invalid choice.")
@@ -89,8 +98,12 @@ Number Entered:""")
 
 
         if not temp:
-            root.destroy()
-            result.call(image)
+            if options==1:
+              root.destroy()
+              result_mnist.call(image)
+            elif options ==2:
+              root.destroy()
+              result_Cifar10.call(image)
 
 
     videoplayer.play()
@@ -102,4 +115,3 @@ Number Entered:""")
     root.mainloop()
     print('Main thread done.')
 
-# call("Daksh.jpg")
