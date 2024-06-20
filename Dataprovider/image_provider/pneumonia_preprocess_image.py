@@ -6,7 +6,7 @@ import argparse
 from PIL import Image
 import tensorflow as tf
 
-IMAGE_SIZE = [200, 200]
+IMAGE_SIZE = [150, 150]
 
 
 def process_img(img_name):
@@ -67,7 +67,7 @@ def process_img(img_name):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Process the image to 3*200*200 and create CSV file.")
+        description="Process the image to 3*150*150 and create CSV file.")
     parser.add_argument("-f", "--File_Name", type=str,
                         help="Image file name that is to be processed. Please include the extension.")
     args = parser.parse_args()
