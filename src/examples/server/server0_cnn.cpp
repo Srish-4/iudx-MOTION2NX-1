@@ -323,10 +323,10 @@ std::vector<std::uint64_t> convolution(std::vector<std::uint64_t> input, std::ve
       output[j] = (MOTION::matrix_multiply(1, kernel_segments[k].size(), 1, kernel_segments[k],
                                            image_segments[i]))[0];
 
-      std::cout << output[j] << " ";
+      // std::cout << output[j] << " ";
       j++;
     }
-    std::cout << "\n";
+    // std::cout << "\n";
   }
 
  return output;
@@ -489,7 +489,7 @@ class TestMessageHandler : public MOTION::Communication::MessageHandler {
     { //wait till operation is not done 
       while(operations_done_flag!=2)
         {
-          std::cout<<".";
+          std::cout<<"@";
           boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
         }
       std::vector<std::uint64_t>Final_public;      
@@ -635,7 +635,7 @@ void read_shares(int choice,int my_id, std::vector<uint8_t>&message,const Option
         wpublic.push_back(public_share);
         file >> secret_share;
         wsecret.push_back(secret_share);
-        std::cout<<public_share<<" "<<secret_share<<"\n";
+        // std::cout<<public_share<<" "<<secret_share<<"\n";
       }
       catch (std::ifstream::failure e) {
       std::cerr << "Error while reading the weight shares.\n";
@@ -846,7 +846,7 @@ int main(int argc, char* argv[]) {
     //Waiting to receive the acknowledgement from helpernode
     while(!helpernode_ready_flag)
       {
-        std::cout<<".";
+        std::cout<<"#";
         boost::this_thread::sleep_for(boost::chrono::milliseconds(200));
       }
 
@@ -875,7 +875,7 @@ std::cout<<"Sending Image shares to the helper node\n";
     std::cout<<std::endl;
     while(operations_done_flag!=2)
       {
-        std::cout<<".";
+        std::cout<<"^";
         boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
       } 
     

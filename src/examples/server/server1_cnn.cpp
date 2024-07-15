@@ -315,7 +315,7 @@ std::vector<std::uint64_t> convolution(std::vector<std::uint64_t> input, std::ve
       // std::cout << output[j] << " ";
       j++;
     }
-    std::cout << "\n";
+    // std::cout << "\n";
   }
 
  return output;
@@ -444,7 +444,7 @@ class TestMessageHandler : public MOTION::Communication::MessageHandler {
   { //wait till operation is not done 
     while(operations_done_flag!=2)
       {
-        std::cout<<".";
+        std::cout<<"@";
         boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
       }
 
@@ -457,7 +457,7 @@ class TestMessageHandler : public MOTION::Communication::MessageHandler {
       Final_public.push_back(temp);
       int kernel_index = (i*conv_kernels)/k;
        
-      std::cout<<Final_public[i]<<" "<<randomnum[i]<<"\n"; 
+      //std::cout<<Final_public[i]<<" "<<randomnum[i]<<"\n"; 
       Final_public[i]+=bpublic[kernel_index];
       randomnum[i]+=bsecret[kernel_index];
     }
@@ -794,7 +794,7 @@ int main(int argc, char* argv[]) {
     //Waiting to receive the acknowledgement from helpernode
     while(!helpernode_ready_flag)
       {
-        std::cout<<".";
+        std::cout<<"#";
         boost::this_thread::sleep_for(boost::chrono::milliseconds(200));
       }
 
@@ -821,7 +821,7 @@ int main(int argc, char* argv[]) {
       //Waiting for the operations to complete. 
       while(operations_done_flag!=2)
         {
-          std::cout<<".";
+          std::cout<<"^";
           boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
         }
 

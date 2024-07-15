@@ -173,13 +173,13 @@ std::vector<std::uint64_t> convolution(std::vector<std::uint64_t> input, std::ve
 
         for(int i=0;i<input.size();i++)
        {
-        std::cout<<input[i]<<" ";
+        // std::cout<<input[i]<<" ";
        }
         std::cout<<"***************\n";
 
        for(int i=0;i<weights.size();i++)
        {
-        std::cout<<weights[i]<<" ";
+        // std::cout<<weights[i]<<" ";
        }
         std::cout<<"\n";
         std::cout<<"***************\n";
@@ -256,7 +256,7 @@ std::vector<std::uint64_t> convolution(std::vector<std::uint64_t> input, std::ve
       // std::cout << output[j] << " ";
       j++;
     }
-    std::cout << "\n";
+   // std::cout << "\n";
   }
 
  return output;
@@ -333,7 +333,7 @@ void operations()
 
   for(int i=0;i<z.size();i++)
   {  
-  std::cout<<z[i]+r[i]<<" ";
+  // std::cout<<z[i]+r[i]<<" ";
   adduint64(z[i],msg_Z); //z=z-r  server1
   adduint64(r[i],msg_R); //r  server0
   }
@@ -567,20 +567,15 @@ int main(int argc, char* argv[]) {
     //Waiting for server 0 and 1 to send their start messages. 
     while((!server0_ready_flag) || (!server1_ready_flag))
       {
-        std::cout<<".";
+        std::cout<<"@";
         boost::this_thread::sleep_for(boost::chrono::milliseconds(400));
       }
 
     // Sending acknowledgement message to server 0 and 1, after receiving the start message.
     std::cout<<"Sending acknowledgement message to server 0 and 1\n";
+    std::cout<<"ACK bit before sending to 1\n";
     std::vector<std::uint8_t> ack{(std::uint8_t)1};
-    try{
-    comm_layer->send_message(1,ack); 
-    }
-    catch (std::runtime_error& e) {
-      std::cerr << "Error occurred while sending the ack message to server 1: " << e.what() << "\n";
-      return EXIT_FAILURE;
-    }
+
     try{
       comm_layer->send_message(0,ack);
     }
@@ -588,12 +583,23 @@ int main(int argc, char* argv[]) {
       std::cerr << "Error occurred while sending the ack message to server 0: " << e.what() << "\n";
       return EXIT_FAILURE;
     }
+    try{
+    comm_layer->send_message(1,ack); 
+    }
+    catch (std::runtime_error& e) {
+      std::cerr << "Error occurred while sending the ack message to server 1: " << e.what() << "\n";
+      return EXIT_FAILURE;
+    }
+    std::cout<<"ACK bit after sending to 1\n";
+    std::cout<<"ACK bit before sending to 0\n";
+
+    std::cout<<"ACK bit after sending to 0\n";
     std::cout<<"Sent acknowledgement message to server 0 and 1\n";
 
     //Waiting for the operations to complete before sending the results to the servers.
     while(!operations_done_flag)
       {
-        std::cout<<".";
+        std::cout<<"#";
         boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
       }
     
