@@ -258,13 +258,13 @@ elif [ ${layer_types[layer_id]} -eq 1 ] && [ $layer_id -gt 2 ];then
    
    input_config="cnn_outputshare"
    
-   echo "Helpernode starts!!"
+   # echo "Helpernode starts!!"
    $build_path/bin/server0_cnn --WB_file file_config_model0 --input_file $input_config  --party 0,$cs0_host,$cs0_port_inference --party 1,$cs1_host,$cs1_port_inference --helper_node $helpernode_host,$helpernode_port_inference --current-path $build_path --layer-id $layer_id --fractional-bits $fractional_bits > $debug_0/server0_layer${layer_id}.txt &
    pid1=$!
    wait $pid1
    check_exit_statuses $?
    echo "Layer $layer_id: Convolution is done"
-   echo "Helpernode ends!!"
+   # echo "Helpernode ends!!"
 
    tail -n +2 server0/outputshare_0 >> server0/cnn_outputshare_0
 
@@ -285,7 +285,7 @@ elif [ ${layer_types[layer_id]} -eq 1 ] && [ $layer_id -gt 2 ];then
    echo "Layer $layer_id: ReLU is done"
 
     #echo "no of out rows per split" $no_of_out_rows_per_split
-   tail -n +2 server0/outputshare_0 >> server0/maxpool_temp0
+   tail -n +2 server0/outputshare_0 >> server0/cnn_outputshare_0
 
 #########################################################################
 
@@ -293,13 +293,13 @@ elif [ ${layer_types[layer_id]} -eq 0 ] && [[ $layer_id -lt $number_of_layers ]]
 
       input_config="outputshare"
       
-      echo "Helpernode starts!!"
+      # echo "Helpernode starts!!"
       $build_path/bin/server0 --WB_file file_config_model0 --input_file $input_config  --party 0,$cs0_host,$cs0_port_inference --party 1,$cs1_host,$cs1_port_inference --helper_node $helpernode_host,$helpernode_port_inference  --current-path $build_path --layer-id $layer_id --fractional-bits $fractional_bits > $debug_0/server0_layer${layer_id}.txt &
       pid1=$!
       wait $pid1
       check_exit_statuses $?
       echo "Layer $layer_id: Matrix multiplication and addition is done"
-      echo "Helpernode ends!!"
+      # echo "Helpernode ends!!"
 
 
       $build_path/bin/tensor_gt_relu --my-id 0 --party 0,$cs0_host,$relu0_port_inference --party 1,$cs1_host,$relu1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --filepath file_config_input0 --current-path $build_path > $debug_0/tensor_gt_relu0_layer${layer_id}.txt &
@@ -359,23 +359,4 @@ echo "Elapsed Time: $(($end-$start)) seconds"
 
 cd $scripts_path
 
-
-# Function to handle the SIGINT signal
-# cleanup() {
-#     echo "Interrupt signal received. Killing process with PID $pid"
-#     kill -9 $pid
-#     exit 1
-# }
-
-# # Trap the SIGINT signal (Ctrl+C)
-# trap cleanup SIGINT
-
-# # Capture the PID of the background process
-# pid=$!
-
-# # Wait for the C++ program to finish
-# wait $pid
-
-# # If the program finishes normally, you can add any additional cleanup or handling here
-# echo "Program finished"
 

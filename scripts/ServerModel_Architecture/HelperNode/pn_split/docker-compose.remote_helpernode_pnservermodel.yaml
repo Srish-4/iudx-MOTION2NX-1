@@ -27,14 +27,14 @@ services:
       - "4014:4014"
     #mem_limit: 600m
     #cpus: 0.750
-    mem_limit: 7000m
+    mem_limit: 4000m
     #cpus: 1.7
     logging:
       driver: "json-file"
       options:
         max-file: "5"
         max-size: "10m"
-    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/Pneumonia/ && ./helpernode_server0_pn.sh && while (true);  do  sleep 10; done"
+    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/pn_split/ && ./helpernode_server0_pn.sh && while (true);  do  sleep 10; done"
 
   # SMPC server 1
   smpc-server1:
@@ -57,7 +57,7 @@ services:
       # cs1_port_image_receiver
       - "4015:4015"
     #mem_limit: 600m
-    mem_limit: 8000m 
+    mem_limit: 4000m 
     #cpus: 1.7
     #cpus: 0.750
     logging:
@@ -65,7 +65,7 @@ services:
       options:
         max-file: "5"
         max-size: "10m"
-    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/Pneumonia/ && ./helpernode_server1_pn.sh && while (true);  do  sleep 10; done"
+    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/pn_split/ && ./helpernode_server1_pn.sh && while (true);  do  sleep 10; done"
 
   # SMPC server 2 - helpernode server
   smpc-server2:
@@ -81,14 +81,14 @@ services:
     ports:
       # helpernode_port_inference
       - "4011:4011"
-    mem_limit: 2000m
+    mem_limit: 4000m
     #cpus: 0.75
     logging:
       driver: "json-file"
       options:
         max-file: "5"
         max-size: "10m"
-    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/Pneumonia/ && ./helpernode_server2_pn.sh && while (true);  do  sleep 10; done"
+    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/pn_split/ && ./helpernode_server2_pn.sh && while (true);  do  sleep 10; done"
 volumes:
   smpc-server1-volume:
   smpc-server0-volume:

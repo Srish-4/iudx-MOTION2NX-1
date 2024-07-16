@@ -69,13 +69,11 @@ do
 
 if [ ${layer_types[layer_id]} -eq 1 ];then 
    
-    
-   echo "HelperNode Layer $layer_id starts!!"
+   
+   # echo "Helper node layer $layer_id starts"
    $build_path/bin/server2_cnn --party 0,$cs0_host,$cs0_port_inference --party 1,$cs1_host,$cs1_port_inference --helper_node $helpernode_host,$helpernode_port_inference > $debug_2/helpernode_layer${layer_id}.txt &
    sleep 1
    pid1=$!
-   
-   echo "HelperNode Layer $layer_id ends!!"
    # kill $pid1
 
    wait $pid1
@@ -92,24 +90,4 @@ elif [ ${layer_types[layer_id]} -eq 0 ];then
 
 fi
 done
-
-# Function to handle the SIGINT signal
-# cleanup() {
-#     echo "Interrupt signal received. Killing process with PID $pid"
-#     kill -9 $pid
-#     exit 1
-# }
-
-# # Trap the SIGINT signal (Ctrl+C)
-# trap cleanup SIGINT
-
-# # Capture the PID of the background process
-# pid=$!
-
-# # Wait for the C++ program to finish
-# wait $pid
-
-# # If the program finishes normally, you can add any additional cleanup or handling here
-# echo "Program finished"
-
 
