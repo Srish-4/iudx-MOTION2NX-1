@@ -7,11 +7,11 @@ output shares of this will be written. The following instructions run this code.
 At the argument "--filepath " give the path of the file containing shares from build_deb.... folder
 Server-0
 ./bin/sigmoid5 --my-id 0 --party 0,::1,7002 --party 1,::1,7000 --arithmetic-protocol beavy
---boolean-protocol yao --fractional-bits 13 --file-input input0
+--boolean-protocol yao --fractional-bits 13 --file-input outputshare_0
 
 Server-1
 ./bin/sigmoid5 --my-id 1 --party 0,::1,7002 --party 1,::1,7000 --arithmetic-protocol beavy
---boolean-protocol yao --fractional-bits 13  --file-input input1
+--boolean-protocol yao --fractional-bits 13  --file-input outputshare_1
 
 */
 // MIT License
@@ -97,7 +97,6 @@ struct Options {
   std::size_t fractional_bits;
   std::string inputpath;
 
-
   std::size_t my_id;
   // std::string filepath_frombuild;
   MOTION::Communication::tcp_parties_config tcp_config;
@@ -142,7 +141,7 @@ void read_input(Options* options, std::string p) {
   std::uint64_t cols = read_file(temps);
   options->input.col = cols;
   std::cout << "c " << cols << "\n";
-  
+
   for (int i = 0; i < rows * cols; ++i) {
     uint64_t m1 = read_file(temps);
     options->input.Delta.push_back(m1);
@@ -154,7 +153,9 @@ void read_input(Options* options, std::string p) {
 
 void file_read(Options* options) {
   std::string path = std::filesystem::current_path();
-  std::string t1 = path + "/" + options->inputpath;
+  // std::string t1 = path + "/" + options->inputpath;
+  std::string t1 = path + "/server" + std::to_string(options->my_id) + "/" + options->inputpath;
+  std::cout << t1 << "\n";
   read_input(options, t1);
 }
 
@@ -311,10 +312,9 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
   std::cout << options.input.row << " " << options.input.col << "\n";
 
   MOTION::tensor::TensorDimensions X_dims = {.batch_size_ = 1,
-  .num_channels_ = 1,
-  .height_ = options.input.row,
-  .width_ = options.input.col  
-  };
+                                             .num_channels_ = 1,
+                                             .height_ = options.input.row,
+                                             .width_ = options.input.col};
 
   MOTION::tensor::TensorCP tensor_X;
 
@@ -326,14 +326,15 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
   input_promises_X[0].set_value(options.input.Delta);
   input_promises_X[1].set_value(options.input.delta);
 
-  std::function<MOTION::tensor::TensorCP(const MOTION::tensor::TensorCP&)> make_activation,make_relu;
-  std::function<MOTION::tensor::TensorCP(const MOTION::tensor::TensorCP&, std::size_t)>make_indicator, make_sigmoid, make_sigmoid5;
-  
+  std::function<MOTION::tensor::TensorCP(const MOTION::tensor::TensorCP&)> make_activation,
+      make_relu;
+  std::function<MOTION::tensor::TensorCP(const MOTION::tensor::TensorCP&, std::size_t)>
+      make_indicator, make_sigmoid, make_sigmoid5;
+
   // -RELU(-X)
   make_activation = [&](const auto& input) {
-  //  const auto negated_tensor = arithmetic_tof.make_tensor_negate(input);
-    const auto boolean_tensor =
-        boolean_tof.make_tensor_conversion(MOTION::MPCProtocol::Yao, input);
+    //  const auto negated_tensor = arithmetic_tof.make_tensor_negate(input);
+    const auto boolean_tensor = boolean_tof.make_tensor_conversion(MOTION::MPCProtocol::Yao, input);
     const auto relu_tensor = boolean_tof.make_tensor_relu_op(boolean_tensor);
     return boolean_tof.make_tensor_conversion(options.arithmetic_protocol, relu_tensor);
   };
@@ -343,40 +344,46 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
     const auto negated_tensor = arithmetic_tof.make_tensor_negate(input);
     const auto boolean_tensor =
         boolean_tof.make_tensor_conversion(MOTION::MPCProtocol::Yao, negated_tensor);
-    const auto relu_tensor = boolean_tof.make_tensor_relu_op(boolean_tensor); // -RELU(-X)
+    const auto relu_tensor = boolean_tof.make_tensor_relu_op(boolean_tensor);  // -RELU(-X)
     const auto finBoolean_tensor =
         boolean_tof.make_tensor_conversion(options.arithmetic_protocol, relu_tensor);
     return arithmetic_tof.make_tensor_negate(finBoolean_tensor);
   };
 
   make_sigmoid = [&](const auto& input, std::size_t input_size) {
-    const std::vector<uint64_t>constant_vector1(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(-0.5, options.fractional_bits));
-    const auto input_const_add = arithmetic_tof.make_tensor_constAdd_op(
-        input, constant_vector1);
+    const std::vector<uint64_t> constant_vector1(
+        input_size,
+        MOTION::new_fixed_point::encode<uint64_t, float>(-0.5, options.fractional_bits));
+    const auto input_const_add = arithmetic_tof.make_tensor_constAdd_op(input, constant_vector1);
     const auto first_relu_output = make_activation(input_const_add);
-    const std::vector<uint64_t>constant_vector2(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(1, options.fractional_bits));
-    const auto input_const_add2 = arithmetic_tof.make_tensor_constAdd_op(
-        first_relu_output, constant_vector2);
+    const std::vector<uint64_t> constant_vector2(
+        input_size, MOTION::new_fixed_point::encode<uint64_t, float>(1, options.fractional_bits));
+    const auto input_const_add2 =
+        arithmetic_tof.make_tensor_constAdd_op(first_relu_output, constant_vector2);
     const auto negated_tensor = arithmetic_tof.make_tensor_negate(input_const_add2);
     const auto final_relu_output = make_activation(negated_tensor);
     return arithmetic_tof.make_tensor_negate(final_relu_output);
   };
 
   make_indicator = [&](const auto& input, std::size_t input_size) {
-    const auto first_relu_output = make_activation(input);    // Returns -RELU(-X)
+    const auto first_relu_output = make_activation(input);  // Returns -RELU(-X)
 
-    // Declaring a constant uint64 vector of same size as input and initializing every element with encoded 9000
-    std::vector<uint64_t> const_vector(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(9000, options.fractional_bits));
+    // Declaring a constant uint64 vector of same size as input and initializing every element with
+    // encoded 9000
+    std::vector<uint64_t> const_vector(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(
+                                                       9000, options.fractional_bits));
 
     // Multiplying the tensor with the constant vector (element wise)
-    const auto mult_output = arithmetic_tof.make_tensor_constMul_op(first_relu_output, const_vector, options.fractional_bits);
+    const auto mult_output = arithmetic_tof.make_tensor_constMul_op(first_relu_output, const_vector,
+                                                                    options.fractional_bits);
     // Reached 9000 * -RELU(-X)
     // Adding an encoded one to the tensor
-    std::vector<uint64_t> const_vector2(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(1, options.fractional_bits));
-    const auto add_output = arithmetic_tof.make_tensor_constAdd_op(mult_output,const_vector2);
+    std::vector<uint64_t> const_vector2(
+        input_size, MOTION::new_fixed_point::encode<uint64_t, float>(1, options.fractional_bits));
+    const auto add_output = arithmetic_tof.make_tensor_constAdd_op(mult_output, const_vector2);
     // Reached 1 + 9000 * -RELU(-X)
 
-    return make_relu(add_output); // make_relu returns RELU(Y)
+    return make_relu(add_output);  // make_relu returns RELU(Y)
     // Returning RELU( 1 + 9000 * -RELU(-X) )
   };
 
@@ -388,61 +395,100 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
 1 - 10^4, x > 5
 */
   make_sigmoid5 = [&](const auto& input, std::size_t input_size) {
-    const std::vector<uint64_t>vector_a(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(-5, options.fractional_bits)); 
-    const std::vector<uint64_t>vector_b(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(-2.5, options.fractional_bits));
-    const std::vector<uint64_t>vector_c(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(2.5, options.fractional_bits));
-    const std::vector<uint64_t>vector_d(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(5, options.fractional_bits));
+    const std::vector<uint64_t> vector_a(
+        input_size, MOTION::new_fixed_point::encode<uint64_t, float>(-5, options.fractional_bits));
+    const std::vector<uint64_t> vector_b(
+        input_size,
+        MOTION::new_fixed_point::encode<uint64_t, float>(-2.5, options.fractional_bits));
+    const std::vector<uint64_t> vector_c(
+        input_size, MOTION::new_fixed_point::encode<uint64_t, float>(2.5, options.fractional_bits));
+    const std::vector<uint64_t> vector_d(
+        input_size, MOTION::new_fixed_point::encode<uint64_t, float>(5, options.fractional_bits));
 
-    const std::vector<uint64_t>constant_vector1(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(0.0001, options.fractional_bits)); 
-    const std::vector<uint64_t>constant_vector2(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(0.02776, options.fractional_bits));
-    const std::vector<uint64_t>constant_vector3(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(0.145, options.fractional_bits));
-    const std::vector<uint64_t>constant_vector4(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(0.17, options.fractional_bits));
-    const std::vector<uint64_t>constant_vector5(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(0.5, options.fractional_bits));
-    const std::vector<uint64_t>constant_vector6(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(0.02776, options.fractional_bits));
-    const std::vector<uint64_t>constant_vector7(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(0.85498, options.fractional_bits));
-    const std::vector<uint64_t>constant_vector8(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(0.9999, options.fractional_bits));
-    
-    const std::vector<uint64_t>vector_one(input_size, MOTION::new_fixed_point::encode<uint64_t, float>(1, options.fractional_bits));
+    const std::vector<uint64_t> constant_vector1(
+        input_size,
+        MOTION::new_fixed_point::encode<uint64_t, float>(0.0001, options.fractional_bits));
+    const std::vector<uint64_t> constant_vector2(
+        input_size,
+        MOTION::new_fixed_point::encode<uint64_t, float>(0.02776, options.fractional_bits));
+    const std::vector<uint64_t> constant_vector3(
+        input_size,
+        MOTION::new_fixed_point::encode<uint64_t, float>(0.145, options.fractional_bits));
+    const std::vector<uint64_t> constant_vector4(
+        input_size,
+        MOTION::new_fixed_point::encode<uint64_t, float>(0.17, options.fractional_bits));
+    const std::vector<uint64_t> constant_vector5(
+        input_size, MOTION::new_fixed_point::encode<uint64_t, float>(0.5, options.fractional_bits));
+    const std::vector<uint64_t> constant_vector6(
+        input_size,
+        MOTION::new_fixed_point::encode<uint64_t, float>(0.02776, options.fractional_bits));
+    const std::vector<uint64_t> constant_vector7(
+        input_size,
+        MOTION::new_fixed_point::encode<uint64_t, float>(0.85498, options.fractional_bits));
+    const std::vector<uint64_t> constant_vector8(
+        input_size,
+        MOTION::new_fixed_point::encode<uint64_t, float>(0.9999, options.fractional_bits));
 
-    //I(x + 5 >= 0)
-    const auto indicator1 = make_indicator(arithmetic_tof.make_tensor_constAdd_op(input, vector_d), input_size);
+    const std::vector<uint64_t> vector_one(
+        input_size, MOTION::new_fixed_point::encode<uint64_t, float>(1, options.fractional_bits));
+
+    // I(x + 5 >= 0)
+    const auto indicator1 =
+        make_indicator(arithmetic_tof.make_tensor_constAdd_op(input, vector_d), input_size);
     const auto negated_indicator1 = arithmetic_tof.make_tensor_negate(indicator1);
-    //1 - I(x + 5 >= 0)
+    // 1 - I(x + 5 >= 0)
     const auto indicator2 = arithmetic_tof.make_tensor_constAdd_op(negated_indicator1, vector_one);
-    //I(x + 2.5 >= 0)
-    const auto indicator3 = make_indicator(arithmetic_tof.make_tensor_constAdd_op(input, vector_c), input_size);
+    // I(x + 2.5 >= 0)
+    const auto indicator3 =
+        make_indicator(arithmetic_tof.make_tensor_constAdd_op(input, vector_c), input_size);
     const auto negated_indicator3 = arithmetic_tof.make_tensor_negate(indicator3);
     // 1 - I(x + 2.5 >= 0)
     const auto indicator4 = arithmetic_tof.make_tensor_constAdd_op(negated_indicator3, vector_one);
-    //I(x - 2.5 >= 0)
-    const auto indicator5 = make_indicator(arithmetic_tof.make_tensor_constAdd_op(input, vector_b), input_size);
+    // I(x - 2.5 >= 0)
+    const auto indicator5 =
+        make_indicator(arithmetic_tof.make_tensor_constAdd_op(input, vector_b), input_size);
     const auto negated_indicator5 = arithmetic_tof.make_tensor_negate(indicator5);
-    //1 - I(x - 2.5 >= 0)
+    // 1 - I(x - 2.5 >= 0)
     const auto indicator6 = arithmetic_tof.make_tensor_constAdd_op(negated_indicator5, vector_one);
-    //I(x - 5 >= 0)
-    const auto indicator7 = make_indicator(arithmetic_tof.make_tensor_constAdd_op(input, vector_a), input_size);
+    // I(x - 5 >= 0)
+    const auto indicator7 =
+        make_indicator(arithmetic_tof.make_tensor_constAdd_op(input, vector_a), input_size);
     const auto negated_indicator7 = arithmetic_tof.make_tensor_negate(indicator7);
-    //1 - I(x - 5 >= 0)
+    // 1 - I(x - 5 >= 0)
     const auto indicator8 = arithmetic_tof.make_tensor_constAdd_op(negated_indicator7, vector_one);
 
     const MOTION::tensor::HammOp hamm_op = {
-      .input_A_shape_ = {options.input.row, options.input.col},
-      .input_B_shape_ = {options.input.row, options.input.col},
-      .output_shape_ = {options.input.row, options.input.col}};
-  
-    MOTION::tensor::TensorCP indicator_hamm_output1 = arithmetic_tof.make_tensor_hamm_op(hamm_op, indicator1, indicator4, options.fractional_bits);
-    MOTION::tensor::TensorCP indicator_hamm_output2 = arithmetic_tof.make_tensor_hamm_op(hamm_op, indicator3, indicator6, options.fractional_bits);
-    MOTION::tensor::TensorCP indicator_hamm_output3 = arithmetic_tof.make_tensor_hamm_op(hamm_op, indicator5, indicator8, options.fractional_bits);
+        .input_A_shape_ = {options.input.row, options.input.col},
+        .input_B_shape_ = {options.input.row, options.input.col},
+        .output_shape_ = {options.input.row, options.input.col}};
 
-    const auto piecewise2 = arithmetic_tof.make_tensor_constAdd_op(arithmetic_tof.make_tensor_constMul_op(input, constant_vector2, options.fractional_bits), constant_vector3);
-    const auto piecewise3 = arithmetic_tof.make_tensor_constAdd_op(arithmetic_tof.make_tensor_constMul_op(input, constant_vector4, options.fractional_bits), constant_vector5);
-    const auto piecewise4 = arithmetic_tof.make_tensor_constAdd_op(arithmetic_tof.make_tensor_constMul_op(input, constant_vector6, options.fractional_bits), constant_vector7);
-  
-    const auto output1 = arithmetic_tof.make_tensor_constMul_op(indicator2, constant_vector1, options.fractional_bits);
-    MOTION::tensor::TensorCP output2 = arithmetic_tof.make_tensor_hamm_op(hamm_op, piecewise2, indicator_hamm_output1, options.fractional_bits);
-    MOTION::tensor::TensorCP output3 = arithmetic_tof.make_tensor_hamm_op(hamm_op, piecewise3, indicator_hamm_output2, options.fractional_bits);
-    MOTION::tensor::TensorCP output4 = arithmetic_tof.make_tensor_hamm_op(hamm_op, piecewise4, indicator_hamm_output3, options.fractional_bits);
-    const auto output5 = arithmetic_tof.make_tensor_constMul_op(indicator7, constant_vector8, options.fractional_bits);
+    MOTION::tensor::TensorCP indicator_hamm_output1 = arithmetic_tof.make_tensor_hamm_op(
+        hamm_op, indicator1, indicator4, options.fractional_bits);
+    MOTION::tensor::TensorCP indicator_hamm_output2 = arithmetic_tof.make_tensor_hamm_op(
+        hamm_op, indicator3, indicator6, options.fractional_bits);
+    MOTION::tensor::TensorCP indicator_hamm_output3 = arithmetic_tof.make_tensor_hamm_op(
+        hamm_op, indicator5, indicator8, options.fractional_bits);
+
+    const auto piecewise2 = arithmetic_tof.make_tensor_constAdd_op(
+        arithmetic_tof.make_tensor_constMul_op(input, constant_vector2, options.fractional_bits),
+        constant_vector3);
+    const auto piecewise3 = arithmetic_tof.make_tensor_constAdd_op(
+        arithmetic_tof.make_tensor_constMul_op(input, constant_vector4, options.fractional_bits),
+        constant_vector5);
+    const auto piecewise4 = arithmetic_tof.make_tensor_constAdd_op(
+        arithmetic_tof.make_tensor_constMul_op(input, constant_vector6, options.fractional_bits),
+        constant_vector7);
+
+    const auto output1 = arithmetic_tof.make_tensor_constMul_op(indicator2, constant_vector1,
+                                                                options.fractional_bits);
+    MOTION::tensor::TensorCP output2 = arithmetic_tof.make_tensor_hamm_op(
+        hamm_op, piecewise2, indicator_hamm_output1, options.fractional_bits);
+    MOTION::tensor::TensorCP output3 = arithmetic_tof.make_tensor_hamm_op(
+        hamm_op, piecewise3, indicator_hamm_output2, options.fractional_bits);
+    MOTION::tensor::TensorCP output4 = arithmetic_tof.make_tensor_hamm_op(
+        hamm_op, piecewise4, indicator_hamm_output3, options.fractional_bits);
+    const auto output5 = arithmetic_tof.make_tensor_constMul_op(indicator7, constant_vector8,
+                                                                options.fractional_bits);
 
     const auto add_output1 = arithmetic_tof.make_tensor_add_op(output1, output2);
     const auto add_output2 = arithmetic_tof.make_tensor_add_op(add_output1, output3);
@@ -452,12 +498,12 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
     return final_output;
   };
 
-  //7 -5 -4 -2.5 -2 0 2 2.5 4 5 7
-  //-0.00012207 , 0.00610352 , 0.0338135 , 0.0749512 , 0.159912 , 0.499756 , 0.8396 , 0.923828 , 0.965454 , 0.999756 , 0.999756
-
+  // 7 -5 -4 -2.5 -2 0 2 2.5 4 5 7
+  //-0.00012207 , 0.00610352 , 0.0338135 , 0.0749512 , 0.159912 , 0.499756 , 0.8396 , 0.923828 ,
+  // 0.965454 , 0.999756 , 0.999756
 
   MOTION::tensor::TensorCP tensor_sigmoid = make_sigmoid5(tensor_X, X_dims.get_data_size());
-  
+
   ENCRYPTO::ReusableFiberFuture<std::vector<std::uint64_t>> output_future, main_output_future,
       main_output;
 

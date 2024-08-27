@@ -396,7 +396,7 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
       .input_B_shape_ = {1, 1},
       .output_shape_ = {8,1}};
 
-auto output2 = arithmetic_tof.make_tensor_constMatrix_Mul_op(gemm_op1, W_encoded, output1, frac_bits);
+auto output2 = arithmetic_tof.make_tensor_constMatrix_Mul_op(gemm_op1, W_encoded, output1, false ,frac_bits);
 
 //Uisng indicator funtion to get value 1 at the postion of the maximum element
 //input_vetor-max_vector 

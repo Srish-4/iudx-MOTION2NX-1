@@ -1,8 +1,9 @@
 /*
 
-./bin/weight_share_receiver_genr --my-id 0 --port 1234 --current-path ${BASE_DIR}/build_debwithrelinfo_gcc
+./bin/Weights_Share_Receiver_CNN --my-id 0 --port 1234 --current-path ${BASE_DIR}/build_debwithrelinfo_gcc
 
-./bin/weight_share_receiver_genr --my-id 1 --port 1235 --current-path ${BASE_DIR}/build_debwithrelinfo_gcc
+./bin/Weights_Share_Receiver_CNN --my-id 1 --port 1235 --current-path ${BASE_DIR}/build_debwithrelinfo_gcc
+
 */
 // MIT License
 //

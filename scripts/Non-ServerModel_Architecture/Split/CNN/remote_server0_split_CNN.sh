@@ -123,13 +123,13 @@ echo "Weight shares received"
 #########################Image Share Receiver ############################################################################################
 echo "Image shares receiver starts"
 
-$build_path/bin/Image_Share_Receiver_CNN --my-id 0 --port $cs0_port_image_receiver --fractional-bits $fractional_bits --file-names $image_config --current-path $build_path > $debug_0/Image_Share_Receiver.txt &
-pid1=$!
+# $build_path/bin/Image_Share_Receiver_CNN --my-id 0 --port $cs0_port_image_receiver --fractional-bits $fractional_bits --file-names $image_config --current-path $build_path > $debug_0/Image_Share_Receiver.txt &
+# pid1=$!
 
 #########################Image Share Provider ############################################################################################
 echo "Image Provider starts"
-$build_path/bin/image_provider_CNN --compute-server0-ip $cs0_host --compute-server0-port $cs0_port_image_receiver --compute-server1-ip $cs1_host --compute-server1-port $cs1_port_image_receiver --fractional-bits $fractional_bits --index $image_id --filepath $image_path > $debug_0/image_provider.txt &
-pid3=$!
+# $build_path/bin/image_provider_CNN --compute-server0-ip $cs0_host --compute-server0-port $cs0_port_image_receiver --compute-server1-ip $cs1_host --compute-server1-port $cs1_port_image_receiver --fractional-bits $fractional_bits --index $image_id --filepath $image_path > $debug_0/image_provider.txt &
+# pid3=$!
 
 wait $pid3 $pid1
 
@@ -153,9 +153,9 @@ split_info_index=0
 split_info_layers=($(echo $split_info | jq -r '.layer_id'))
 split_info_length=${#split_info_layers[@]}
 
-for ((layer_id=1; layer_id<$number_of_layers; layer_id++)); do
+for ((layer_id=1; layer_id<=$number_of_layers; layer_id++)); do
    num_splits=1
-
+   # echo $layer_id
    # Check for information in split info
    if [[ $split_info_index -lt $split_info_length ]] && [[ $layer_id -eq ${split_info_layers[split_info_index]} ]];
    then
@@ -182,9 +182,9 @@ for ((layer_id=1; layer_id<$number_of_layers; layer_id++)); do
    
    elif [ ${layer_types[layer_id]} -eq 0 ] && [ $num_splits -gt 1 ];
    then
+      echo "185"
       cp $build_path/server0/outputshare_0  $build_path/server0/split_input_0
-      input_config="split_input"
-
+      input_config="split_input"      
       num_rows=$(jq -r '.rows' <<< "$split");
       echo "Number of splits for layer $layer_id matrix multiplication: $num_rows::$num_splits"
       x=$(($num_rows/$num_splits))
@@ -257,7 +257,7 @@ for ((layer_id=1; layer_id<$number_of_layers; layer_id++)); do
       num_kernels=$(jq -r '.kernels' <<< "$split");
 
       x=$(($num_kernels/$num_splits))
-      for(( m = 1; m <= $num_splits; m++ )); do 
+      for(( m = 1; m <= $num_splilts; m++ )); do 
          let l=$((m-1)) 
          let a=$((l*x+1))
          let b=$((m*x))
@@ -268,7 +268,16 @@ for ((layer_id=1; layer_id<$number_of_layers; layer_id++)); do
          check_exit_statuses $? 
          echo "Layer $layer_id, split $m: Convolution is done."
 
+         # tail -n +2 server0/outputshare_0 >> server0/final_outputshare_0
+
+         $build_path/bin/tensor_gt_relu --my-id 0 --party 0,$cs0_host,$relu0_port_inference --party 1,$cs1_host,$relu1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --filepath file_config_input0 --current-path $build_path > $debug_0/tensor_gt_relu0_layer${layer_id}.txt &
+         pid1=$!
+         wait $pid1
+         check_exit_statuses $?
+         echo "Layer $layer_id: ReLU is done"
+         tail -n +2 server0/outputshare_0 >> server0/cnn_outputshare_0
          tail -n +2 server0/outputshare_0 >> server0/final_outputshare_0
+
       done
 
       cp server0/final_outputshare_0  server0/outputshare_0 
@@ -280,12 +289,12 @@ for ((layer_id=1; layer_id<$number_of_layers; layer_id++)); do
       fi
       check_exit_statuses $?
 
-      $build_path/bin/tensor_gt_relu --my-id 0 --party 0,$cs0_host,$relu0_port_inference --party 1,$cs1_host,$relu1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --filepath file_config_input0 --current-path $build_path > $debug_0/tensor_gt_relu0_layer${layer_id}.txt &
-      pid1=$!
-      wait $pid1
-      check_exit_statuses $?
-      echo "Layer $layer_id: ReLU is done"
-      tail -n +2 server0/outputshare_0 >> server0/cnn_outputshare_0
+      # $build_path/bin/tensor_gt_relu --my-id 0 --party 0,$cs0_host,$relu0_port_inference --party 1,$cs1_host,$relu1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --filepath file_config_input0 --current-path $build_path > $debug_0/tensor_gt_relu0_layer${layer_id}.txt &
+      # pid1=$!
+      # wait $pid1
+      # check_exit_statuses $?
+      # echo "Layer $layer_id: ReLU is done"
+      # tail -n +2 server0/outputshare_0 >> server0/cnn_outputshare_0
    fi
 done
 
@@ -300,16 +309,18 @@ echo "Image Provider listening for the inferencing result"
 
 ###################################### Last Layer #########################################################################
 
-input_config="outputshare"
+ #input_config="outputshare"
 
-$build_path/bin/tensor_gt_mul_test --my-id 0 --party 0,$cs0_host,$cs0_port_inference --party 1,$cs1_host,$cs1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --config-file-input $input_config --config-file-model file_config_model0 --layer-id $layer_id --current-path $build_path > $debug_0/tensor_gt_mul0_layer${layer_id}.txt &
-pid1=$!
-wait $pid1
-check_exit_statuses $?
-echo "Layer $layer_id: Matrix multiplication and addition is done"
+# $build_path/bin/tensor_gt_mul_test --my-id 0 --party 0,$cs0_host,$cs0_port_inference --party 1,$cs1_host,$cs1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --config-file-input $input_config --config-file-model file_config_model0 --layer-id $layer_id --current-path $build_path > $debug_0/tensor_gt_mul0_layer${layer_id}.txt &
+# pid1=$!
+# wait $pid1
+# check_exit_statuses $?
+# echo "Layer $layer_id: Matrix multiplication and addition is done"
 
 ####################################### Argmax  ###########################################################################
-$build_path/bin/argmax --my-id 0 --threads 1 --party 0,$cs0_host,$cs0_port_inference --party 1,$cs1_host,$cs1_port_inference --arithmetic-protocol beavy --boolean-protocol beavy --config-filename file_config_input0 --config-input $image_share --current-path $build_path > $debug_0/argmax0_layer${layer_id}.txt &
+#$build_path/bin/argmax --my-id 0 --threads 1 --party 0,$cs0_host,$cs0_port_inference --party 1,$cs1_host,$cs1_port_inference --arithmetic-protocol beavy --boolean-protocol beavy --config-filename file_config_input0 --config-input $image_share --current-path $build_path > $debug_0/argmax0_layer${layer_id}.txt &
+$build_path/bin/tensor_argmax --my-id 0 --party 0,$cs0_host,$cs0_port_inference --party 1,$cs1_host,$cs1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --filepath file_config_input0 --current-path $build_path > $debug_0/argmax0_layer2.txt &
+
 pid1=$!
 wait $pid1
 check_exit_statuses $?
@@ -331,7 +342,9 @@ echo "Output shares of server 1 received by the Image provider"
 
 ############################            Reconstruction       ##################################################################################
 echo "Reconstruction Starts"
-$build_path/bin/Reconstruct --current-path $image_provider_path 
+#$build_path/bin/Reconstruct --current-path $image_provider_path 
+$build_path/bin/Reconstruct --current-path $image_provider_path --fractional-bits $fractional_bits
+
 wait 
 
 

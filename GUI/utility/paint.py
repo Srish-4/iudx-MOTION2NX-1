@@ -6,6 +6,7 @@ from tkinter import messagebox
 from utility import File_location
 from utility import SMPC
 from utility import NN
+from utility import CNN_helper
 
 
 
@@ -150,7 +151,7 @@ def call():
     
     def back(root):
         root.destroy()
-        NN.call()
+        CNN_helper.call()
 
     # ------------------- User Interface -------------------
 

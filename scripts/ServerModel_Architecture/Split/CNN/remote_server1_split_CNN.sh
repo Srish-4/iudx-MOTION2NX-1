@@ -8,7 +8,7 @@ check_exit_statuses() {
       fi
    done
 }
-image_config=${BASE_DIR}/config_files/file_config_input_remote
+image_config="remote_image_shares"
 build_path=${BASE_DIR}/build_debwithrelinfo_gcc
 model_provider_path=${BASE_DIR}/data/ModelProvider
 debug_1=${BASE_DIR}/logs/server1
@@ -133,7 +133,7 @@ split_info_index=0
 split_info_layers=($(echo $split_info | jq -r '.layer_id'))
 split_info_length=${#split_info_layers[@]}
 
-for ((layer_id=1; layer_id<$number_of_layers; layer_id++)); do
+for ((layer_id=1; layer_id<=$number_of_layers; layer_id++)); do
    num_splits=1
 
    # Check for information in split info
@@ -143,6 +143,8 @@ for ((layer_id=1; layer_id<$number_of_layers; layer_id++)); do
       num_splits=$(jq -r '.splits' <<< "$split");
       ((split_info_index++))
    fi
+
+      echo $split
 
    if [ ${layer_types[layer_id]} -eq 0 ] && [ $num_splits -eq 1 ];
    then
@@ -247,7 +249,13 @@ for ((layer_id=1; layer_id<$number_of_layers; layer_id++)); do
          echo "Layer $layer_id, split $m: Convolution is done."
 
          tail -n +2 server1/outputshare_1 >> server1/final_outputshare_1
-      done
+         $build_path/bin/tensor_gt_relu --my-id 1 --party 0,$cs0_host,$relu0_port_inference --party 1,$cs1_host,$relu1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --filepath file_config_input1 --current-path $build_path > $debug_1/tensor_gt_relu1_layer${layer_id}.txt &
+         pid1=$!
+         wait $pid1
+         check_exit_statuses $?
+         echo "Layer $layer_id: ReLU is done"
+         tail -n +2 server1/outputshare_1 >> server1/cnn_outputshare_1
+         done
 
       cp server1/final_outputshare_1  server1/outputshare_1 
       if [ -f server1/final_outputshare_1 ]; then
@@ -258,28 +266,30 @@ for ((layer_id=1; layer_id<$number_of_layers; layer_id++)); do
       fi
       check_exit_statuses $?
 
-      $build_path/bin/tensor_gt_relu --my-id 1 --party 0,$cs0_host,$relu0_port_inference --party 1,$cs1_host,$relu1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --filepath file_config_input1 --current-path $build_path > $debug_1/tensor_gt_relu1_layer${layer_id}.txt &
-      pid1=$!
-      wait $pid1
-      check_exit_statuses $?
-      echo "Layer $layer_id: ReLU is done"
-      tail -n +2 server1/outputshare_1 >> server1/cnn_outputshare_1
+      # $build_path/bin/tensor_gt_relu --my-id 1 --party 0,$cs0_host,$relu0_port_inference --party 1,$cs1_host,$relu1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --filepath file_config_input1 --current-path $build_path > $debug_1/tensor_gt_relu1_layer${layer_id}.txt &
+      # pid1=$!
+      # wait $pid1
+      # check_exit_statuses $?
+      # echo "Layer $layer_id: ReLU is done"
+      # tail -n +2 server1/outputshare_1 >> server1/cnn_outputshare_1
    fi
 done
 
 ###################################### Last Layer #########################################################################
 
-input_config="outputshare"
+# input_config="outputshare"
 
-$build_path/bin/tensor_gt_mul_test --my-id 1 --party 0,$cs0_host,$cs0_port_inference --party 1,$cs1_host,$cs1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --config-file-input $input_config --config-file-model file_config_model1 --layer-id $layer_id --current-path $build_path > $debug_1/tensor_gt_mul1_layer${layer_id}.txt &
-pid1=$!
-wait $pid1 
-check_exit_statuses $?
-echo "Layer $layer_id: Matrix multiplication and addition is done"
+# $build_path/bin/tensor_gt_mul_test --my-id 1 --party 0,$cs0_host,$cs0_port_inference --party 1,$cs1_host,$cs1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --config-file-input $input_config --config-file-model file_config_model1 --layer-id $layer_id --current-path $build_path > $debug_1/tensor_gt_mul1_layer${layer_id}.txt &
+# pid1=$!
+# wait $pid1 
+# check_exit_statuses $?
+# echo "Layer $layer_id: Matrix multiplication and addition is done"
 
 ####################################### Argmax  ###########################################################################
 
-$build_path/bin/argmax --my-id 1 --threads 1 --party 0,$cs0_host,$cs0_port_inference --party 1,$cs1_host,$cs1_port_inference --arithmetic-protocol beavy --boolean-protocol beavy --config-filename file_config_input1 --config-input $image_share --current-path $build_path > $debug_1/argmax1_layer${layer_id}.txt &
+#$build_path/bin/argmax --my-id 1 --threads 1 --party 0,$cs0_host,$cs0_port_inference --party 1,$cs1_host,$cs1_port_inference --arithmetic-protocol beavy --boolean-protocol beavy --config-filename file_config_input1 --config-input $image_share --current-path $build_path > $debug_1/argmax1_layer${layer_id}.txt &
+$build_path/bin/tensor_argmax --my-id 1 --party 0,$cs0_host,$cs0_port_inference --party 1,$cs1_host,$cs1_port_inference --arithmetic-protocol beavy --boolean-protocol yao --fractional-bits $fractional_bits --filepath file_config_input1 --current-path $build_path > $debug_1/argmax1_layer${layer_id}.txt &
+
 pid1=$!
 wait $pid1
 check_exit_statuses $?

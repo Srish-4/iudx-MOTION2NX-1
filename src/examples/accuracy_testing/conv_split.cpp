@@ -128,7 +128,7 @@ std::uint64_t read_file(std::ifstream& pro) {
       break;
     }
   }
-  //std::cout << "in read_file in cnn : " << str << std::endl;
+  // std::cout << "in read_file in cnn : " << str << std::endl;
   std::string::size_type sz = 0;
   std::uint64_t ret = (uint64_t)std::stoull(str, &sz, 0);
   return ret;
@@ -201,7 +201,7 @@ int image_shares(Options* options, std::string p) {
     if (temps) {
       std::cout << "File found\n";
     } else {
-      std::cout << "Image shares file not found at "+p+"\n";
+      std::cout << "Image shares file not found at " + p + "\n";
     }
   } catch (std::ifstream::failure e) {
     std::cerr << "Error while opening the image share file.\n";
@@ -238,7 +238,7 @@ int image_shares(Options* options, std::string p) {
       options->image_file.Delta.push_back(m1);
       uint64_t m2 = read_file(temps);
       options->image_file.delta.push_back(m2);
-     // std::cout << "D : " << m1 << "d : "<< m2 << "--";
+      // std::cout << "D : " << m1 << "d : "<< m2 << "--";
     } catch (std::ifstream::failure e) {
       std::cerr << "Error while reading columns from image shares.\n";
       return EXIT_FAILURE;
@@ -274,7 +274,8 @@ int W_shares(Options* options, std::string p) {
   int kernels, channels, rows, cols;
   try {
     kernels = options->kernel_end - options->kernel_start + 1;
-    std::cout << "Kernel Start: " << options->kernel_start << "  Kernel End: "<< options->kernel_end << std::endl;
+    std::cout << "Kernel Start: " << options->kernel_start
+              << "  Kernel End: " << options->kernel_end << std::endl;
     if (kernels < 1) {
       std::cerr << "\n Either row start or row end is not a feasible number.\n";
       return EXIT_FAILURE;
@@ -293,34 +294,37 @@ int W_shares(Options* options, std::string p) {
     options->W_file.col = cols;
     std::cout << "k " << kernels << " c " << channels << " r " << rows << " c " << cols << "\n";
 
-    for (int i=0; i<4; i++)
-      (options->pads)[i] = read_file(indata);  
-    for (int i=0; i<2; i++)
-      (options->strides)[i] = read_file(indata);
+    for (int i = 0; i < 4; i++) (options->pads)[i] = read_file(indata);
+    for (int i = 0; i < 2; i++) (options->strides)[i] = read_file(indata);
     std::cout << "strides " << (options->strides)[0] << " " << (options->strides)[1] << "\n";
-    
+
     options->output.chnl = kernels;
-    options->output.row = (options->image_file.row - options->W_file.row + options->pads[0] + options->pads[2] + options->strides[0]) / options->strides[0];
-    options->output.col = (options->image_file.col - options->W_file.col + options->pads[1] + options->pads[3] + options->strides[1]) / options->strides[1];
-    
+    options->output.row = (options->image_file.row - options->W_file.row + options->pads[0] +
+                           options->pads[2] + options->strides[0]) /
+                          options->strides[0];
+    options->output.col = (options->image_file.col - options->W_file.col + options->pads[1] +
+                           options->pads[3] + options->strides[1]) /
+                          options->strides[1];
+
   } catch (std::ifstream::failure e) {
     std::cerr << "Error while reading dimensions from weight shares.\n";
     return EXIT_FAILURE;
   }
-  
+
   indata.seekg(std::ios::beg);
-  for (int i = 0; i < ((options->kernel_start - 1) * channels * rows * cols) + 1; ++i) {    // Skip Dimensions and kernels
+  for (int i = 0; i < ((options->kernel_start - 1) * channels * rows * cols) + 1;
+       ++i) {  // Skip Dimensions and kernels
     // std::cout << "i is " << i << "\n";
     indata.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
   }
 
-  for (int i = 0; i < kernels * channels * rows * cols; ++i) {                              // Read required no of elements
+  for (int i = 0; i < kernels * channels * rows * cols; ++i) {  // Read required no of elements
     try {
       uint64_t m1 = read_file(indata);
       options->W_file.Delta.push_back(m1);
       uint64_t m2 = read_file(indata);
       options->W_file.delta.push_back(m2);
-     // std::cout << "D : " << m1 << "d : "<< m2 << "--";
+      // std::cout << "D : " << m1 << "d : "<< m2 << "--";
     } catch (std::ifstream::failure e) {
       std::cerr << "Error while reading input weight shares from file.\n";
       return EXIT_FAILURE;
@@ -337,7 +341,7 @@ int B_shares(Options* options, std::string p) {
     if (std::ifstream(p)) {
       std::cout << "File found\n";
     } else {
-      std::cout << "Bias shares file not found at " + p +"\n";
+      std::cout << "Bias shares file not found at " + p + "\n";
     }
 
     indata.open(p);
@@ -368,7 +372,7 @@ int B_shares(Options* options, std::string p) {
     std::cerr << "Error while reading rows and columns from input bias share file.\n";
     return EXIT_FAILURE;
   }
-  
+
   indata.seekg(std::ios::beg);
   for (int i = 0; i < ((options->kernel_start - 1) * cols) + 1; ++i) {
     indata.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -377,10 +381,12 @@ int B_shares(Options* options, std::string p) {
   for (int i = 0; i < rows * cols; ++i) {
     try {
       uint64_t m1 = read_file(indata);
-      for (int i=0; i<options->output.row*options->output.col; i++)       // Blowing up Bias values by output row * output col no of times
+      for (int i = 0; i < options->output.row * options->output.col;
+           i++)  // Blowing up Bias values by output row * output col no of times
         options->B_file.Delta.push_back(m1);
       uint64_t m2 = read_file(indata);
-      for (int i=0; i<options->output.row*options->output.col; i++)       // Blowing up small delta shares
+      for (int i = 0; i < options->output.row * options->output.col;
+           i++)  // Blowing up small delta shares
         options->B_file.delta.push_back(m2);
     } catch (std::ifstream::failure e) {
       std::cerr << "Error while reading the input bias share file.\n";
@@ -408,7 +414,7 @@ int file_read(Options* options) {
     if (file2) {
       std::cout << "File found\n";
     } else {
-      std::cout << "File not found at "+ t2 +"\n";
+      std::cout << "File not found at " + t2 + "\n";
     }
   } catch (std::ifstream::failure e) {
     std::cerr << "Error while opening config_model file.\n";
@@ -598,46 +604,52 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
   // std::cout << "Inside create_composite"
   //           << "\n";
   // retrieve the gate factories for the chosen protocols
-/*******************************************************************/
+  /*******************************************************************/
 
   auto& arithmetic_tof = backend.get_tensor_op_factory(options.arithmetic_protocol);
   auto& boolean_tof = backend.get_tensor_op_factory(MOTION::MPCProtocol::Yao);
   std::cout << "Inside Build CNN" << std::endl;
-  
-  const MOTION::tensor::TensorDimensions input_dims{
-      .batch_size_ = 1, .num_channels_ = options.image_file.chnl, .height_ = options.image_file.row, .width_ = options.image_file.col};
-  const MOTION::tensor::TensorDimensions conv_weights_dims{
-      .batch_size_ = options.W_file.ker, .num_channels_ = options.W_file.chnl, .height_ = options.W_file.row, .width_ = options.W_file.col};
+
+  const MOTION::tensor::TensorDimensions input_dims{.batch_size_ = 1,
+                                                    .num_channels_ = options.image_file.chnl,
+                                                    .height_ = options.image_file.row,
+                                                    .width_ = options.image_file.col};
+  const MOTION::tensor::TensorDimensions conv_weights_dims{.batch_size_ = options.W_file.ker,
+                                                           .num_channels_ = options.W_file.chnl,
+                                                           .height_ = options.W_file.row,
+                                                           .width_ = options.W_file.col};
   // Bias Dimensions for convolution operation
   const MOTION::tensor::TensorDimensions CBias1_dims{options.output.chnl, 1, 1, 1};
   // Bias Dimensions for addition operation
-  const MOTION::tensor::TensorDimensions CBias_dims{options.output.chnl, options.output.row, options.output.col};
+  const MOTION::tensor::TensorDimensions CBias_dims{options.output.chnl, options.output.row,
+                                                    options.output.col};
 
-  const MOTION::tensor::Conv2DOp conv_op = {.kernel_shape_ = {options.W_file.ker,
-                                                              options.W_file.chnl,
-                                                              options.W_file.row,
-                                                              options.W_file.col},
-                                            .input_shape_ = {options.image_file.chnl,
-                                                             options.image_file.row,
-                                                             options.image_file.col},
-                                            .output_shape_ = {options.output.chnl,
-                                                              options.output.row,
-                                                              options.output.col},
-                                            .dilations_ = {1, 1},
-                                            .pads_ = {options.pads[0], options.pads[1], options.pads[2], options.pads[3]},
-                                            .strides_ = {options.strides[0], options.strides[1]}};
+  const MOTION::tensor::Conv2DOp conv_op = {
+      .kernel_shape_ = {options.W_file.ker, options.W_file.chnl, options.W_file.row,
+                        options.W_file.col},
+      .input_shape_ = {options.image_file.chnl, options.image_file.row, options.image_file.col},
+      .output_shape_ = {options.output.chnl, options.output.row, options.output.col},
+      .dilations_ = {1, 1},
+      .pads_ = {options.pads[0], options.pads[1], options.pads[2], options.pads[3]},
+      .strides_ = {options.strides[0], options.strides[1]}};
 
-
-  std::cout << "----------------------------------" << std::endl << "Input Dimensions:" << std::endl;
-  std::cout << "Batch Size: " << input_dims.batch_size_ << "\nNumber of Channels: " << input_dims.num_channels_
-    << "\nHeight of Matrix: " << input_dims.height_ << "\nWidth of Matrix: " << input_dims.width_ << std::endl;
+  std::cout << "----------------------------------" << std::endl
+            << "Input Dimensions:" << std::endl;
+  std::cout << "Batch Size: " << input_dims.batch_size_
+            << "\nNumber of Channels: " << input_dims.num_channels_
+            << "\nHeight of Matrix: " << input_dims.height_
+            << "\nWidth of Matrix: " << input_dims.width_ << std::endl;
   std::cout << "----------------------------------" << std::endl;
-  std::cout << "Convolutional Weights:\n"<< "Batch Size: " << conv_weights_dims.batch_size_ << "\nNumber of Channels: "
-    << conv_weights_dims.num_channels_ << "\nHeight of Matrix: " << conv_weights_dims.height_ << "\nWidth of Matrix: "
-    << conv_weights_dims.width_ << std::endl;
+  std::cout << "Convolutional Weights:\n"
+            << "Batch Size: " << conv_weights_dims.batch_size_
+            << "\nNumber of Channels: " << conv_weights_dims.num_channels_
+            << "\nHeight of Matrix: " << conv_weights_dims.height_
+            << "\nWidth of Matrix: " << conv_weights_dims.width_ << std::endl;
   std::cout << "----------------------------------" << std::endl;
-  std::cout << "Output Dimensions:\n"<< "Number of Channels: " << options.output.chnl <<
-  "\nHeight of Matrix: " << options.output.row << "\nWidth of Matrix: " << options.output.col << std::endl;
+  std::cout << "Output Dimensions:\n"
+            << "Number of Channels: " << options.output.chnl
+            << "\nHeight of Matrix: " << options.output.row
+            << "\nWidth of Matrix: " << options.output.col << std::endl;
   std::cout << "----------------------------------" << std::endl;
 
   MOTION::tensor::TensorCP tensor_X, tensor_CW1, tensor_CB1, tensor_CB, add_output;
@@ -669,30 +681,30 @@ auto create_composite_circuit(const Options& options, MOTION::TwoPartyTensorBack
   input_promises_CW1[0].set_value(options.W_file.Delta);
   input_promises_CW1[1].set_value(options.W_file.delta);
 
-  input_promises_CB1[0].set_value(options.B_file.Delta);                // Dummy Bias values (5, 1, 1, 1) for mnist
+  input_promises_CB1[0].set_value(
+      options.B_file.Delta);  // Dummy Bias values (5, 1, 1, 1) for mnist
   input_promises_CB1[1].set_value(options.B_file.delta);
 
-  input_promises_CB[0].set_value(options.B_file.Delta);                 // Blown up Bias values (845(5x13x13), 1) for mnist
+  input_promises_CB[0].set_value(
+      options.B_file.Delta);  // Blown up Bias values (845(5x13x13), 1) for mnist
   input_promises_CB[1].set_value(options.B_file.delta);
 
-//***********************************************************************
-
+  //***********************************************************************
 
   // Convolution Operation
-  auto conv_output = arithmetic_tof.make_tensor_conv2d_op(conv_op, tensor_X, tensor_CW1, tensor_CB1, options.fractional_bits);
+  auto conv_output = arithmetic_tof.make_tensor_conv2d_op(conv_op, tensor_X, tensor_CW1, tensor_CB1,
+                                                          options.fractional_bits);
   // Bias Addition
   add_output = arithmetic_tof.make_tensor_add_op(conv_output, tensor_CB);
- 
 
   ENCRYPTO::ReusableFiberFuture<std::vector<std::uint64_t>> output_future;
   if (options.my_id == 0) {
-    arithmetic_tof.make_arithmetic_tensor_output_other(add_output);
+    arithmetic_tof.make_arithmetic_tensor_output_other(tensor_CB);
   } else {
-    output_future = arithmetic_tof.make_arithmetic_64_tensor_output_my(add_output);
+    output_future = arithmetic_tof.make_arithmetic_64_tensor_output_my(tensor_CB);
   }
   return output_future;
-/////////////////////////////////////////////////////////////////////////////////////
-
+  /////////////////////////////////////////////////////////////////////////////////////
 }
 
 void genrt_cnn_outputshare(const Options& options) {
@@ -702,16 +714,15 @@ void genrt_cnn_outputshare(const Options& options) {
   try {
     o_file.open(o_path);
     if (!o_file) {
-        std::cout << "File not created at "+ o_path +"\n";
+      std::cout << "File not created at " + o_path + "\n";
     }
   } catch (std::ifstream::failure e) {
     std::cerr << "Error while opening cnn_outputshare file.\n";
     return;
   }
-  o_file <<  options.kernels_original << " " <<               // Dimensions with channels
-             options.output.row  << " " <<
-             options.output.col  << "\n";
-  
+  o_file << options.kernels_original << " " <<  // Dimensions with channels
+      options.output.row << " " << options.output.col << "\n";
+
   o_file.close();
   return;
 }
@@ -724,13 +735,13 @@ void genrt_outputshare(const Options& options) {
   try {
     o_file.open(o_path);
     if (!o_file) {
-      std::cout << "File not created at "+ o_path +"\n";
+      std::cout << "File not created at " + o_path + "\n";
     }
   } catch (std::ifstream::failure e) {
     std::cerr << "Error while opening outputshare file.\n";
     return;
   }
-                                                            // Dimensions without channels
+  // Dimensions without channels
   o_file << options.kernels_original * options.output.row * options.output.col << " " << 1 << "\n";
   o_file.close();
   return;
@@ -739,8 +750,8 @@ void genrt_outputshare(const Options& options) {
 void run_composite_circuit(const Options& options, MOTION::TwoPartyTensorBackend& backend) {
   auto output_future = create_composite_circuit(options, backend);
   backend.run();
-    //  if (options.my_id == 1) {
-    // auto main = output_future.get();
+  if (options.my_id == 1) {
+    auto main = output_future.get();
     //   std::vector<long double> mod_x;
     //   // std::string path = std::filesystem::current_path();
     //   std::string path = options.currentpath;
@@ -749,38 +760,27 @@ void run_composite_circuit(const Options& options, MOTION::TwoPartyTensorBackend
     //   x.open(filename, std::ios_base::app);
     //   x << options.imageprovider << "\n";
     // int i = 1;
-    // for (int k = 0; k < main.size(); ++k)
-    //       {
-    //         long double temp =
-    //       MOTION::new_fixed_point::decode<uint64_t, long double>(main[k], options.fractional_bits);
-    //       if (k%13 == 0)
-    //       {
-    //         std::cout << i << " ::";
-    //         i = i+1; 
-    //       } 
-    //       std::cout << std::fixed << std::setprecision(3) << temp << " ";
-          
-    //       if (k%13 == 12) 
-    //         {
-    //           std::cout << "\n";
-    //         }
-
-    //       }
-    // std::cout << "******************************************" << std::endl;
+    for (int k = 0; k < main.size(); ++k) {
+      long double temp =
+          MOTION::new_fixed_point::decode<uint64_t, long double>(main[k], options.fractional_bits);
+      std::cout << temp << " ";
+    }
+    std::cout << std::endl;
     // std::cout << "print output of the CNN " << main.size() << std::endl;
     // std::cout << "******************************************" << std::endl;
-    // for (int i = 0; i < 5; ++i) 
+    // for (int i = 0; i < 5; ++i)
     // {
     //   std::cout << i << "******" << std::endl;
-    //   for (int j = 0; j < 5; ++j) 
+    //   for (int j = 0; j < 5; ++j)
     //   {
     //     for (int k = 0; k < 5; ++k)
     //       {
     //         long double temp =
-    //       MOTION::new_fixed_point::decode<uint64_t, long double>(main[(i*5) + (j*13) + k ], options.fractional_bits);
-      
-    //       std::cṭout << temp << ",";
+    //       MOTION::new_fixed_point::decode<uint64_t, long double>(main[(i*5) + (j*13) + k ],
+    //       options.fractional_bits);
 
+    //       std::cṭout << temp << ",";
+  }
   return;
 }
 
@@ -807,7 +807,7 @@ int main(int argc, char* argv[]) {
       genrt_cnn_outputshare(*options);
       genrt_outputshare(*options);
     }
-    
+
     comm_layer->sync();
     comm_stats.add(comm_layer->get_transport_statistics());
     comm_layer->reset_transport_statistics();
