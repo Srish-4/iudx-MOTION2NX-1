@@ -18,13 +18,13 @@ services:
     network_mode: "host"
     ports:
       # cs0_port_model_receiver
-      - "4005:4005"
+      - "4016:4016"
       # cs0_port_inference
-      - "4009:4009"
+      - "4020:4020"
       # relu0_port_inference
-      - "4012:4012"
+      - "4023:4023"
       # cs0_port_image_receiver
-      - "4014:4014"
+      - "4025:4025"
     #mem_limit: 600m
     #cpus: 0.750
     mem_limit: 3300m
@@ -34,7 +34,7 @@ services:
       options:
         max-file: "5"
         max-size: "10m"
-    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/MultiCNN/ && ./MUL_helpernode_server0_cnn.sh m && while (true);  do  sleep 10; done"
+    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/MultiCNN/ && ./MUL_helpernode_server0_cnn.sh c && while (true);  do  sleep 10; done"
 
   # SMPC server 1
   smpc-server1:
@@ -49,13 +49,13 @@ services:
       # - motion2nx-net
     ports:
       # cs1_port_model_receiver
-      - "4006:4006"
+      - "4017:4017"
       # cs1_port_inference
-      - "4010:4010"
+      - "4021:4021"
       # relu1_port_inference
-      - "4013:4013"
+      - "4024:4024"
       # cs1_port_image_receiver
-      - "4015:4015"
+      - "4026:4026"
     #mem_limit: 600m
     mem_limit: 3300m 
     cpus: 1.7
@@ -65,7 +65,7 @@ services:
       options:
         max-file: "5"
         max-size: "10m"
-    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/MultiCNN/ && ./MUL_helpernode_server1_cnn.sh m && while (true);  do  sleep 10; done"
+    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/MultiCNN/ && ./MUL_helpernode_server1_cnn.sh c && while (true);  do  sleep 10; done"
 
   # SMPC server 2 - helpernode server
   smpc-server2:
@@ -80,7 +80,7 @@ services:
     #   - motion2nx-net
     ports:
       # helpernode_port_inference
-      - "4011:4011"
+      - "4022:4022"
     mem_limit: 600m
     cpus: 0.75
     logging:
@@ -88,7 +88,7 @@ services:
       options:
         max-file: "5"
         max-size: "10m"
-    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/MultiCNN/ && ./MUL_helpernode_server2_cnn.sh m && while (true);  do  sleep 10; done"
+    command: bash -c "cd scripts/ServerModel_Architecture/HelperNode/MultiCNN/ && ./MUL_helpernode_server2_cnn.sh c && while (true);  do  sleep 10; done"
 volumes:
   smpc-server1-volume:
   smpc-server0-volume:

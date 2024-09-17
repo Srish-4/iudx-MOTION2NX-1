@@ -14,7 +14,14 @@ check_exit_statuses() {
 build_path=${BASE_DIR}/build_debwithrelinfo_gcc
 debug_2=${BASE_DIR}/logs/helpernode_cnn
 scripts_path=${BASE_DIR}/scripts
-smpc_config_path=${BASE_DIR}/config_files/smpc-helpernode-config.json
+if [ "$1" = "m" ]; then
+    smpc_config_path="${BASE_DIR}/config_files/smpc-helpernode-config.json"
+elif [ "$1" = "c" ]; then
+    smpc_config_path="${BASE_DIR}/config_files/smpc-helpernode-config-cifar.json"
+else
+    echo "Invalid argument. Use 'm' for smpc-helpernode-config.json or 'c' for smpc-helpernode-config-cifar.json."
+    exit 1
+fi
 smpc_config=`cat $smpc_config_path`
 
 #####################Inputs##########################################################################################################
