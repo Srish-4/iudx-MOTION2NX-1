@@ -6,6 +6,7 @@ from tkinter import messagebox
 from utility import File_location
 from utility import SMPC
 from utility import NN
+from utility import CNN_helper
 
 
 
@@ -90,7 +91,6 @@ def call():
             x1 = x + canvas.winfo_width()
             y1 = y + canvas.winfo_height()
 
-            
             img = ImageGrab.grab().crop((x,y,x1,y1))
             
             try:
@@ -151,7 +151,7 @@ def call():
     
     def back(root):
         root.destroy()
-        NN.call()
+        CNN_helper.call()
 
     # ------------------- User Interface -------------------
 

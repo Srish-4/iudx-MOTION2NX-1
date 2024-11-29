@@ -7,6 +7,15 @@ from utility import SMPC
 from utility import NN_helper
 from utility import two_layer
 from utility import five_layer
+from utility import CNN_layer
+from utility import CNN_helper
+from utility import CNN_Split
+from utility import NN
+from utility import loading
+from utility import four_layer
+from utility import result_Cifar10
+from utility import result_mnist
+from utility import Six_layer
 
 
 # window = Tk()
@@ -41,7 +50,12 @@ def call():
         "Neural Network Inferencing",
         "Neural Network Inferencing with helper node",
         "Setup: Two Layer Neural Network",
-        "Setup: Five Layer Neural Network"
+        "Setup: Five Layer Neural Network",
+      #  "Convolution Neural Network",
+        "Convolution Neural Network Inferencing with helper node",
+         "Convolution Neural Network Split",
+         "Setup: Four Layer Convolution Network",
+           "Setup: Six Layer Convolution Network"
     ]
 
 
@@ -59,6 +73,23 @@ def call():
         elif choice == "Setup: Five Layer Neural Network":
             window.destroy()
             five_layer.call()
+    #    elif choice == "Convolution Neural Network":
+     #       window.destroy()
+      #      CNN_layer.call()
+        elif choice == "Convolution Neural Network Inferencing with helper node":
+            window.destroy()
+            CNN_helper.call()
+        elif choice == "Convolution Neural Network Split":
+            window.destroy()
+            CNN_Split.call()
+        elif choice=="Setup: Four Layer Convolution Network":
+            window.destroy()
+            four_layer.call()
+        elif choice == "Setup: Six Layer Convolution Network":
+            window.destroy()
+            Six_layer.call()
+        
+            
 
     clicked = StringVar()
     my_combo = ttk.Combobox(canvas_2, values=options,font=('sans 20 bold'), justify=CENTER, textvariable=clicked, style='W.TCombobox', state = "readonly")
@@ -321,10 +352,14 @@ def call():
 
     def painter(root):
         root.destroy()
+        loading.get_user_choice(1)
+        loading.choose_dataset(1)
         paint.call()
 
     def Uploader(root):
         root.destroy()
+        loading.get_user_choice(1)
+        loading.choose_dataset(1)
         File_location.call("")
 
     paint_button = Button(window, text="Draw your Number", padx=80,pady=10, command=lambda: painter(window),highlightthickness=3, highlightbackground="black", font=('Times 20 bold'))
@@ -343,7 +378,4 @@ def call():
 
     window.resizable(False , False)
     window.mainloop()
-
-
-
 
